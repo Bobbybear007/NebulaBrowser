@@ -1,4 +1,4 @@
-import { icons } from './icons.js';
+import { icons as initialIcons, fetchAllIcons } from './icons.js';
 
 const BOOKMARKS_KEY = 'steamos_browser_bookmarks';
 
@@ -13,7 +13,8 @@ const searchInput       = document.getElementById('searchInput');
 const iconFilter       = document.getElementById('iconFilter');
 const iconGrid         = document.getElementById('iconGrid');
 const selectedIconInput= document.getElementById('selectedIcon');
-let selectedIcon       = icons[0];
+let selectedIcon       = initialIcons[0];
+let availableIcons     = initialIcons;
 
 let bookmarks = JSON.parse(localStorage.getItem(BOOKMARKS_KEY)) || [];
 
@@ -69,15 +70,17 @@ function renderBookmarks() {
 // draw the icon‐grid, filtering by the search term
 function renderIconGrid(filter = '') {
   iconGrid.innerHTML = '';
-  icons
+  availableIcons
     .filter(name => name.includes(filter))
     .forEach(name => {
       const span = document.createElement('span');
       span.className = 'material-symbols-outlined icon-item';
       span.textContent = name;
       span.onclick = () => {
-        iconGrid.querySelectorAll('.icon-item')
-          .forEach(el => el.classList.remove('selected'));
+        const currentSelected = iconGrid.querySelector('.icon-item.selected');
+        if (currentSelected) {
+          currentSelected.classList.remove('selected');
+        }
         span.classList.add('selected');
         selectedIcon = name;
         selectedIconInput.value = name;
@@ -95,6 +98,18 @@ iconFilter.addEventListener('input', () =>
 
 // initial render
 renderIconGrid();
+
+// Asynchronously fetch all icons and update the grid
+(async () => {
+  try {
+    const allIcons = await fetchAllIcons();
+    availableIcons = allIcons;
+    // Re-render with the full list, preserving any filter text
+    renderIconGrid(iconFilter.value.trim().toLowerCase());
+  } catch (error) {
+    console.error('Failed to fetch all icons:', error);
+  }
+})();
 
 saveBookmarkBtn.onclick = () => {
   const title = titleInput.value.trim();

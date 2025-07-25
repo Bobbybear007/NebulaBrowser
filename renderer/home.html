@@ -30,18 +30,27 @@
   <!-- Popup for adding a bookmark -->
   <div id="addPopup" class="popup hidden">
     <div class="popup-inner">
-      <h2>Add Bookmark</h2>
-      <!-- ICON GRID SELECTOR -->
-      <label>Icon:</label>
-      <input type="text" id="iconFilter" placeholder="Search icons…" class="icon-filter">
+      <h2>Add New Bookmark</h2>
+
+      <!-- Title field -->
+      <label for="titleInput">Title</label>
+      <input type="text" id="titleInput" placeholder="Enter title">
+
+      <!-- URL field -->
+      <label for="urlInput">URL</label>
+      <input type="url" id="urlInput" placeholder="https://example.com">
+
+      <!-- Icon picker -->
+      <label for="iconFilter">Icon</label>
+      <input type="text" id="iconFilter" class="icon-filter"
+             placeholder="Search for icon or enter emoji">
       <div id="iconGrid" class="icon-grid"></div>
       <input type="hidden" id="selectedIcon">
-      <!-- TITLE & URL -->
-      <input type="text" id="titleInput" placeholder="Title">
-      <input type="url" id="urlInput" placeholder="https://...">
+
+      <!-- action buttons -->
       <div class="popup-buttons">
-        <button id="saveBookmarkBtn">Save</button>
         <button id="cancelBtn">Cancel</button>
+        <button id="saveBookmarkBtn">Add</button>
       </div>
     </div>
   </div>
