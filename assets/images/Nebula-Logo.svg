@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2832.51 1767.86">
+  <!-- Generator: Adobe Illustrator 29.6.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 9)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #792fff;
+      }
+
+      .st1 {
+        fill: #1f0;
+      }
+
+      .st2 {
+        fill: none;
+        stroke: #fff;
+        stroke-dasharray: 514.68 205.87;
+        stroke-miterlimit: 10;
+        stroke-width: 150px;
+      }
+
+      .st3 {
+        fill: #0384ff;
+      }
+
+      .st4 {
+        display: none;
+      }
+
+      .st5 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="1599.65" y1="1234.69" x2="2301.48" y2="532.77" gradientTransform="translate(0 1767.66) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7b2eff"/>
+      <stop offset="1" stop-color="#0086ff"/>
+    </linearGradient>
+  </defs>
+  <g id="Layer_2" class="st4">
+    <rect class="st1" x="-357.79" y="-102.04" width="3604.86" height="2130.85"/>
+  </g>
+  <g id="Layer_1">
+    <circle class="st2" cx="1950.55" cy="883.53" r="688"/>
+    <circle class="st5" cx="1950.56" cy="883.93" r="496.3"/>
+    <rect class="st0" x="78.18" y="915.01" width="944.83" height="96.74" rx="48.37" ry="48.37"/>
+    <rect class="st3" x="328.64" y="339.26" width="689.08" height="96.74" rx="48.37" ry="48.37"/>
+    <rect class="st3" x="328.64" y="1466.3" width="689.08" height="96.74" rx="48.37" ry="48.37"/>
+  </g>
+</svg>

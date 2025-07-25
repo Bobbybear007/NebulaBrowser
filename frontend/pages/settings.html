@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Browser - Settings</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        body {
+            background: #1a1724;
+            color: white;
+        }
+        .container {
+            padding: 20px;
+        }
+        .settings-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .settings-section h2 {
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+        .setting-item p {
+            margin: 0;
+        }
+        .setting-item .description {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        button {
+            background-color: #792fff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0384ff;
+        }
+        #backToHome {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Settings</h1>
+
+        <div class="settings-section">
+            <h2>Privacy and Security</h2>
+            <div class="setting-item">
+                <div>
+                    <p>Clear browsing data</p>
+                    <span class="description">Clear cookies, and other site data.</span>
+                </div>
+                <button id="clearCookiesBtn">Clear data</button>
+            </div>
+            <div class="setting-item">
+                <div>
+                    <p>Clear bookmarks</p>
+                    <span class="description">Remove all bookmarks from bookmarks.json.</span>
+                </div>
+                <button id="clearBookmarksBtn">Clear bookmarks</button>
+            </div>
+            <div class="setting-item">
+                <div>
+                    <p>Clear home bookmarks</p>
+                    <span class="description">Remove all bookmarks from home-bookmarks.json.</span>
+                </div>
+                <button id="clearHomeBookmarksBtn">Clear home bookmarks</button>
+            </div>
+        </div>
+
+        <button id="backToHome">Back to Home</button>
+    </div>
+
+    <script src="./settings.js"></script>
+</body>
+</html>

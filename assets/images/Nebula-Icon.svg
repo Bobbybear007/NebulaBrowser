@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1526 1526">
+  <!-- Generator: Adobe Illustrator 29.6.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 9)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: none;
+        stroke: #fff;
+        stroke-dasharray: 514.68 205.87;
+        stroke-miterlimit: 10;
+        stroke-width: 150px;
+      }
+
+      .st1 {
+        fill: #1f0;
+      }
+
+      .st2 {
+        display: none;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="412.1" y1="-275.22" x2="1113.92" y2="426.7" gradientTransform="translate(0 687.66)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7b2eff"/>
+      <stop offset="1" stop-color="#0086ff"/>
+    </linearGradient>
+  </defs>
+  <g id="Layer_2" class="st2">
+    <rect class="st1" x="-1545.34" y="-222.57" width="3604.86" height="2130.85"/>
+  </g>
+  <g id="Layer_11" data-name="Layer_1">
+    <circle class="st0" cx="763" cy="763" r="688"/>
+    <circle class="st3" cx="763.01" cy="763.4" r="496.3"/>
+  </g>
+</svg>
