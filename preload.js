@@ -1,10 +1,18 @@
+// preload.js
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Expose a limited set of IPC methods to the renderer process
+window.addEventListener('DOMContentLoaded', () => {
+  console.log("Browser UI loaded.");
+});
+
+// stubbed preload—no-op or expose an API as needed
 contextBridge.exposeInMainWorld('electronAPI', {
-    loadURL: (url) => ipcRenderer.send('load-url', url),
-    goBack: () => ipcRenderer.send('go-back'),
-    goForward: () => ipcRenderer.send('go-forward'),
-    refreshPage: () => ipcRenderer.send('refresh-page'),
-    // You can add more APIs here as your browser grows
+  send: (ch, ...args) => ipcRenderer.send(ch, ...args),
+  invoke: (ch, ...args) => ipcRenderer.invoke(ch, ...args),
+  on: (ch, fn) => ipcRenderer.on(ch, (e, ...args) => fn(...args))
+});
+
+contextBridge.exposeInMainWorld('bookmarksAPI', {
+  load: () => ipcRenderer.invoke('load-bookmarks'),
+  save: (data) => ipcRenderer.invoke('save-bookmarks', data)
 });

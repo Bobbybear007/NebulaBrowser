@@ -1,0 +1,10 @@
+[
+  "home",
+  "star",
+  "bookmark",
+  "favorite",
+  "public",
+  "search",
+  "settings"
+  // … add as many icon names as you like …
+]

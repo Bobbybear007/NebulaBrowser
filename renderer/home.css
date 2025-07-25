@@ -1,0 +1,281 @@
+/* Load InterVariable */
+@font-face {
+  font-family: 'InterVariable';
+  src: url('../assets/images/fonts/InterVariable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Base reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+
+body, html {
+  /* replace solid bg with a subtle gradient */
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: linear-gradient(145deg, #121418 0%, #1B1035 100%);
+  color: var(--text);
+  overflow: hidden;
+  font-family: 'InterVariable', sans-serif;
+}
+
+/* Center everything */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Center content vertically */
+  height: 100vh;
+  overflow-y: auto;
+  text-align: center;
+  padding: 2rem;
+}
+
+
+/* Logo block */
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.logo-img {
+  /* bump up logo size and add subtle shadow */
+  width: 150px;
+  height: 150px;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
+
+.logo-text {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 70px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  padding: 0.25rem;
+  margin-bottom: 2rem;
+  width: 500px;
+  max-width: 90vw;
+  overflow: hidden;
+}
+
+.search-bar input.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: #333;
+}
+
+.search-bar button.search-btn {
+  border: none;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: white;
+  padding: 0.75rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.search-bar button.search-btn:hover {
+  transform: scale(1.1);
+}
+
+.search-bar button.search-btn .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+/* Remove default focus outline */
+.search-bar input.search-input:focus,
+.search-bar button.search-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Bookmark grid */
+.bookmarks {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  max-width: 800px;
+}
+
+/* Individual bookmark tile */
+.bookmark {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  color: var(--text);
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transform: translateY(0) scale(1);
+}
+
+.bookmark:hover {
+  transform: translateY(-4px) scale(1.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.bookmark-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+  /* accentuate icons & add-button */
+  color: var(--accent);
+}
+
+.bookmark-title {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  background: none;
+  border: none;
+  color: red;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Add button style */
+.add-bookmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  font-size: 2rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px dashed rgba(255,255,255,0.3);
+  backdrop-filter: blur(6px);
+  transition: transform 0.2s ease-in-out, background 0.3s, border-color 0.3s;
+  color: white;
+  transform: scale(1);
+}
+
+.add-bookmark:hover {
+  transform: scale(1.1);
+}
+
+/* Popup styling */
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(18,20,24,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+
+.popup.hidden {
+  display: none;
+}
+
+.popup-inner {
+  background: var(--dark-purple);
+  padding: 2rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  color: var(--text);
+  min-width: 300px;
+}
+
+.popup-inner input {
+  padding: 0.5rem;
+  background: var(--dark-blue);
+  border: none;
+  color: var(--text);
+  border-radius: 6px;
+}
+
+.popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.popup-buttons button {
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.popup-buttons button:hover {
+  background: var(--accent);
+}
+
+/* Color Palette */
+:root {
+  --bg: #121418;
+  --dark-blue: #0B1C2B;
+  --dark-purple: #1B1035;
+  --primary: #7B2EFF;
+  --accent: #00C6FF;
+  --text: #E0E0E0;
+}
+
+/* Icon grid styling */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.icon-item {
+  cursor: pointer;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: center;
+}
+.icon-item:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.icon-item.selected {
+  border-color: #0078d4;
+  background: rgba(0, 120, 212, 0.1);
+}

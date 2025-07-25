@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings</title>
+  <link rel="stylesheet" href="settings.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    section { margin-bottom: 30px; }
+    h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+    ul { list-style: none; padding-left: 0; }
+    li { padding: 5px 0; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚙️ Browser Settings</h1>
+
+    <div class="setting-group">
+      <label for="clear-data-btn">Clear All Cookies &amp; Data</label>
+      <button id="clear-data-btn">Clear Data</button>
+    </div>
+
+    <p class="note">Settings are stored locally on this device.</p>
+  </div>
+
+  <!-- status overlay moved outside of .container -->
+  <div id="status" class="status hidden">
+    <div class="spinner"></div>
+    <span id="status-text"></span>
+  </div>
+
+
+
+  <script src="settings.js"></script>
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    async function loadHistories() {
+      try {
+        const searchHistory = await ipcRenderer.invoke('load-search-history');
+        const siteHistory = await ipcRenderer.invoke('load-site-history');
+
+        const searchList = document.getElementById('search-history-list');
+        const siteList = document.getElementById('site-history-list');
+
+        // Clear existing content
+        searchList.innerHTML = '';
+        siteList.innerHTML = '';
+
+        // Populate search history
+        searchHistory.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item;
+          searchList.appendChild(li);
+        });
+
+        // Populate site history
+        siteHistory.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item;
+          siteList.appendChild(li);
+        });
+      } catch(err) {
+        console.error('Error loading histories:', err);
+      }
+    }
+
+    // Load histories on page load.
+    window.addEventListener('DOMContentLoaded', loadHistories);
+  </script>
+</body>
+</html>

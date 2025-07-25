@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Nebula Browser</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Removed custom draggable bar CSS to allow use of native title bar */
+
+    :root { --resize-border: 8px; }
+
+    body {
+      padding: var(--resize-border);
+      margin: 0;
+      height: calc(100vh - 2 * var(--resize-border));
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    ::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+      /* Adjust the color and transparency as needed */
+    }
+  </style>
+</head>
+<body>
+  <div id="tab-bar"></div>
+
+  <div id="nav">
+    <div class="nav-left">
+      <button onclick="goBack()">←</button>
+      <button onclick="goForward()">→</button>
+      <button id="reload-btn">⟳</button>
+    </div>
+
+    <div class="nav-center">
+      <input id="url" type="text" placeholder="Type URL here" />
+      <button onclick="navigate()">Go</button>
+    </div>
+
+    <div class="nav-right">
+      <button title="Downloads">⭳</button>
+      <div class="menu-wrapper">
+        <button id="menu-btn">☰</button>
+        <div id="menu-popup" class="hidden">
+          <button onclick="openSettings()">Settings</button>
+          <!-- You can add more options here -->
+          <div class="zoom-controls">
+            <button id="zoom-out-btn">-</button>
+            <span id="zoom-percent">100%</span>
+            <button id="zoom-in-btn">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="webviews">
+    <webview id="webview" src="https://example.com"></webview>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const webview = document.getElementById('webview');
+    
+    webview.addEventListener('did-navigate', (e) => {
+      // save site URL
+      ipcRenderer.invoke('save-site-history', e.url);
+      // extract search query if present
+      const m = /[?&](?:q|query)=([^&]+)/.exec(e.url);
+      if (m && m[1]) {
+        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
+        ipcRenderer.invoke('save-search-history', query);
+      }
+    });
+  </script>
+</body>
+</html>

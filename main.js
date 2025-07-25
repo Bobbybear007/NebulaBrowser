@@ -1,92 +1,271 @@
-const { app, BrowserWindow, BrowserView, ipcMain } = require('electron'); // Add ipcMain here
-const path = require('node:path');
+const { app, BrowserWindow, ipcMain, session, screen, shell } = require('electron');
+const fs = require('fs');
+const path = require('path');
 
-let mainWindow;
-let browserView;
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-accelerated-video-decode');
+app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,CanvasOopRasterization');
+app.commandLine.appendSwitch('no-sandbox'); // Optional, for some setups
 
-const createWindow = () => {
-    mainWindow = new BrowserWindow({
-        width: 1000,
-        height: 700,
-        minWidth: 800,
-        minHeight: 600,
-        titleBarStyle: 'hiddenInset',
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-            webviewTag: false
-        }
+// Set a custom application name
+app.setName('Nebula');
+
+// --- clear any prior registrations to prevent duplicate‐handler errors ---
+ipcMain.removeHandler('window-minimize');
+ipcMain.removeHandler('window-maximize');
+ipcMain.removeHandler('window-close');
+
+function createWindow(startUrl) {
+  // Get the available screen size
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+  // Ensure nativeWindowOpen is disabled
+  let windowOptions = {
+    width,
+    height,
+    resizable: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      contextIsolation: true, // was false
+      webviewTag: true,
+      enableRemoteModule: true, // Enable the remote module
+      nodeIntegrationInSubFrames: true,    // ← allow require() inside your <webview>
+      nativeWindowOpen: false // Prevent Electron from creating new windows
+    },
+    fullscreen: false,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets/images/Logos/Nebula-favicon.png'),
+    title: 'Nebula',
+  };
+
+  if (process.platform === 'darwin') {
+    Object.assign(windowOptions, {
+      frame: true,
+      titleBarStyle: 'hidden',
+      trafficLightPosition: { x: 15, y: 20 },
+      backgroundColor: '#00000000',
+      transparent: true,
     });
-
-    mainWindow.loadFile('index.html');
-
-    // Open the DevTools.
-    // mainWindow.webContents.openDevTools();
-
-    browserView = new BrowserView({
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-        }
+  } else if (process.platform === 'win32') {
+    Object.assign(windowOptions, {
+      frame: true, // Use default Windows title bar.
+      // removed titleBarOverlay to restore native Windows controls.
     });
+  } else {
+    windowOptions.frame = true;
+  }
 
-    mainWindow.setBrowserView(browserView);
+  const win = new BrowserWindow(windowOptions);
 
-    const navBarHeight = 80; // Make sure this matches your CSS navbar height
-    const updateBrowserViewBounds = () => {
-        const { width, height } = mainWindow.getBounds();
-        browserView.setBounds({ x: 0, y: navBarHeight, width: width, height: height - navBarHeight });
-    };
+  // Handle window.open() calls – load URL in this window
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    win.loadURL(url);
+    return { action: 'deny' };
+  });
 
-    updateBrowserViewBounds(); // Set initial bounds
-    browserView.webContents.loadURL('https://www.google.com');
+  // Intercept direct navigations (e.g., user clicks a link) – load URL in this window
+  win.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault(); // Prevent navigation in the current window
+    win.loadURL(url);
+  });
 
-    mainWindow.on('resize', updateBrowserViewBounds);
+  // Intercept legacy new-window events – load URL in this window
+  win.webContents.on('new-window', (event, url) => {
+    event.preventDefault(); // Prevent new Electron window
+    win.loadURL(url);
+  });
 
-    // --- IPC Handlers ---
-    ipcMain.on('load-url', (event, url) => {
-        let formattedUrl = url;
-        // Basic URL formatting: if no protocol, assume https://
-        if (!formattedUrl.match(/^[a-zA-Z]+:\/\//)) {
-            formattedUrl = 'https://' + formattedUrl;
-        }
-        browserView.webContents.loadURL(formattedUrl).catch(err => {
-            console.error('Failed to load URL:', err);
-            // Optionally send an error back to the renderer
-        });
+  // ensure all embedded <webview> tags also use the same window
+  win.webContents.on('did-attach-webview', (event, webContents) => {
+    // intercept window.open() inside webview
+    webContents.setWindowOpenHandler(({ url }) => {
+      webContents.loadURL(url);
+      return { action: 'deny' };
     });
-
-    ipcMain.on('go-back', () => {
-        if (browserView.webContents.canGoBack()) {
-            browserView.webContents.goBack();
-        }
+    // intercept legacy new-window on webview
+    webContents.on('new-window', (e, url) => {
+      e.preventDefault();
+      webContents.loadURL(url);
     });
-
-    ipcMain.on('go-forward', () => {
-        if (browserView.webContents.canGoForward()) {
-            browserView.webContents.goForward();
-        }
+    // intercept navigation on webview (e.g. user clicks link)
+    webContents.on('will-navigate', (e, url) => {
+      e.preventDefault();
+      webContents.loadURL(url);
     });
+  });
 
-    ipcMain.on('refresh-page', () => {
-        browserView.webContents.reload();
+  win.loadFile('renderer/index.html');
+
+  // if caller passed in a URL, forward it to the renderer after load
+  if (startUrl) {
+    win.webContents.once('did-finish-load', () => {
+      win.webContents.send('open-url', startUrl);
     });
-    // --- End IPC Handlers ---
-};
+  }
 
+  // Set default zoom to 100%
+  const zoomFactor = 1.0;
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.setZoomFactor(zoomFactor);
+  });
+
+  // record site and search history on every navigation
+  const recordHistory = async (fileName, entry) => {
+    const filePath = path.join(__dirname, fileName);
+    let data = [];
+    try { data = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch {}
+    if (data[0] !== entry) {
+      data.unshift(entry);
+      if (data.length > 100) data.pop();
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    }
+  };
+
+  win.webContents.on('did-navigate', (event, url) => {
+    recordHistory('site-history.json', url);
+    const m = /[?&](?:q|query)=([^&]+)/.exec(url);
+    if (m && m[1]) {
+      const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
+      recordHistory('search-history.json', query);
+    }
+  });
+}
+
+// This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
-    createWindow();
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
+  createWindow();
+  if (process.platform === 'darwin') {
+    // Set macOS dock icon using an icns file for proper display.
+    app.dock.setIcon(path.join(__dirname, 'assets/images/Logos/Nebula-Icon.icns'));
+  }
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
 
+// Quit when all windows are closed.
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
+  if (process.platform !== 'darwin') app.quit();
+});
+
+// ipcMain handlers
+
+// --- window control handlers (only registered once now)
+ipcMain.handle('window-minimize', event => {
+  BrowserWindow.fromWebContents(event.sender).minimize();
+});
+ipcMain.handle('window-maximize', event => {
+  const w = BrowserWindow.fromWebContents(event.sender);
+  w.isMaximized() ? w.unmaximize() : w.maximize();
+});
+ipcMain.handle('window-close', event => {
+  BrowserWindow.fromWebContents(event.sender).close();
+});
+
+// Add site and search history IPC handlers
+ipcMain.handle('load-site-history', async () => {
+  const filePath = path.join(__dirname, 'site-history.json');
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    return [];
+  }
+});
+
+ipcMain.handle('save-site-history', async (event, history) => {
+  const filePath = path.join(__dirname, 'site-history.json');
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    return true;
+  } catch (err) {
+    return false;
+  }
+});
+
+ipcMain.handle('load-search-history', async () => {
+  const filePath = path.join(__dirname, 'search-history.json');
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    return [];
+  }
+});
+
+ipcMain.handle('save-search-history', async (event, history) => {
+  const filePath = path.join(__dirname, 'search-history.json');
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    return true;
+  } catch (err) {
+    return false;
+  }
+});
+
+// debug: log default‐homepage changes from renderer
+ipcMain.on('homepage-changed', (event, url) => {
+  console.log('[MAIN] homepage-changed →', url);
+});
+
+
+ipcMain.handle('clear-browser-data', async () => {
+  try {
+    const ses = session.defaultSession;
+
+    // Clear cookies
+    await ses.clearStorageData({ storages: ['cookies'] });
+
+    // Clear local storage and other storage data
+    await ses.clearStorageData({ storages: ['localstorage', 'indexdb', 'filesystem', 'websql'] });
+
+    // Clear cache
+    await ses.clearCache();
+
+    // Clear HTTP authentication cache
+    await ses.clearAuthCache();
+
+    // Clear all cookies explicitly to ensure logged-in accounts are logged out
+    const cookies = await ses.cookies.get({});
+    for (const cookie of cookies) {
+      await ses.cookies.remove(cookie.url, cookie.name);
     }
+
+    return true; // Indicate success
+  } catch (error) {
+    console.error('Failed to clear browser data:', error);
+    return false; // Indicate failure
+  }
+});
+
+ipcMain.handle('get-zoom-factor', event => {
+  const wc = BrowserWindow.fromWebContents(event.sender).webContents;
+  return wc.getZoomFactor();
+});
+
+ipcMain.handle('zoom-in', event => {
+  const wc = BrowserWindow.fromWebContents(event.sender).webContents;
+  const current = wc.getZoomFactor();
+  const z = Math.min(current + 0.1, 3);
+  wc.setZoomFactor(z);
+  return z;
+});
+
+
+ipcMain.handle('zoom-out', event => {
+  const wc = BrowserWindow.fromWebContents(event.sender).webContents;
+  const current = wc.getZoomFactor();
+  const z = Math.max(current - 0.1, 0.25);
+  wc.setZoomFactor(z);
+  return z;
+});
+
+// allow renderer to pop a tab into its own window
+ipcMain.handle('open-tab-in-new-window', (event, url) => {
+  createWindow(url);
 });

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Tab</title>
+  <link rel="icon" href="../assets/images/Logos/Nebula-Logo.svg" type="image/png">
+  <link rel="stylesheet" href="home.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+        rel="stylesheet">
+</head>
+<body>
+  <div class="home-container">
+    <div class="logo">
+      <img src="../assets/images/Logos/Nebula-Logo.svg" class="logo-img">
+      <div class="logo-text">Nebula Browser</div>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search">
+      <button id="searchBtn" class="search-btn">
+        <span class="material-symbols-outlined">search</span>
+      </button>
+    </div>
+
+    <div class="bookmarks" id="bookmarkList">
+      <!-- Bookmarks dynamically inserted here -->
+    </div>
+  </div>
+
+  <!-- Popup for adding a bookmark -->
+  <div id="addPopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2>Add Bookmark</h2>
+      <!-- ICON GRID SELECTOR -->
+      <label>Icon:</label>
+      <input type="text" id="iconFilter" placeholder="Search icons…" class="icon-filter">
+      <div id="iconGrid" class="icon-grid"></div>
+      <input type="hidden" id="selectedIcon">
+      <!-- TITLE & URL -->
+      <input type="text" id="titleInput" placeholder="Title">
+      <input type="url" id="urlInput" placeholder="https://...">
+      <div class="popup-buttons">
+        <button id="saveBookmarkBtn">Save</button>
+        <button id="cancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- make this a module so we can import icons -->
+  <script type="module" src="home.js"></script>
+</body>
+</html>

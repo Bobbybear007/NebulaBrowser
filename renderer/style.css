@@ -1,0 +1,254 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #111;
+  color: white;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+#tab-bar {
+  display: flex;
+  padding-left: 80px; /* leave room for macOS traffic lights */
+  overflow-x: auto; /* allow scrolling when many tabs */
+  /* custom scrollbar styling */
+  scrollbar-color: #444 #2a2a3c;   /* thumb and track for Firefox */
+  scrollbar-width: thin;            /* slimmer track */
+}
+
+#tab-bar > * {
+  flex: 1 1 0;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* NAVBAR LAYOUT */
+#nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #1e1e2e;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.nav-left,
+.nav-center,
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-center {
+  flex: 1;
+  background: #2a2a3c;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+#favicon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
+#url {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+#url::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+#nav button {
+  background: #333;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#nav button:hover {
+  background: #555;
+}
+
+/* MENU DROPDOWN */
+.menu-wrapper {
+  position: relative;
+}
+
+#menu-popup {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background: #2a2a3c;
+  border-radius: 4px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;  /* wider dropdown */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  z-index: 100;
+}
+
+#menu-popup button {
+  background: none;
+  border: none;
+  color: white;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+#menu-popup button:hover {
+  background: #444;
+}
+
+.hidden {
+  display: none;
+}
+
+#menu-popup.hidden {
+  display: none;
+}
+
+/* WEBVIEWS */
+#webviews {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+#webviews webview {
+  flex: 1;
+  display: none;
+  border: none;
+}
+
+#webviews webview.active {
+  display: flex;
+}
+
+/* TABS */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin: 4px 4px 0 0;
+  background: #222;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: background 0.2s, flex 0.2s;
+  min-width: 80px; /* prevent tabs from getting too small */
+}
+
+.tab:hover {
+  background: #333;
+}
+
+.tab.active {
+  background: #444;
+  font-weight: bold;
+  flex: 3 1 0; /* increased grow factor for larger active tab */
+  min-width: 120px; /* larger min width for the active tab */
+}
+
+.tab img {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  border-radius: 2px;
+}
+
+.tab button {
+  margin-left: 8px;
+  background: none;
+  border: none;
+  color: #f55;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ZOOM CONTROLS */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.zoom-controls .zoom-label {
+  flex: 1;
+  font-size: 14px;
+}
+.zoom-controls button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.zoom-controls button:hover {
+  background: #444;
+}
+#zoom-percent {
+  min-width: 36px;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* window controls (Windows only) */
+#window-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  z-index: 200;
+}
+#window-controls button {
+  width: 46px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#window-controls button:hover {
+  background: rgba(255,255,255,0.1);
+}
+#window-controls #close-btn:hover {
+  background: #e81123;
+}
+
+#tab-bar::-webkit-scrollbar {
+  height: 8px;                      /* horizontal scrollbar height */
+}
+#tab-bar::-webkit-scrollbar-track {
+  background: #2a2a3c;
+  border-radius: 4px;
+}
+#tab-bar::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+#tab-bar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
