@@ -15,11 +15,29 @@
       <div class="logo-text">Nebula Browser</div>
     </div>
 
-    <div class="search-bar">
-      <input type="text" id="searchInput" class="search-input" placeholder="Search">
-      <button id="searchBtn" class="search-btn">
-        <span class="material-symbols-outlined">search</span>
-      </button>
+    <div class="search-container">
+      <div class="search-engine-selector">
+        <button id="searchEngineBtn" class="search-engine-btn">
+          <img id="searchEngineLogo" src="../assets/images/icons/google.svg" alt="Search Engine">
+        </button>
+        <div id="searchEngineDropdown" class="search-engine-dropdown hidden">
+          <div class="search-engine-option" data-engine="google">
+            <img src="../assets/images/icons/google.svg" alt="Google">
+          </div>
+          <div class="search-engine-option" data-engine="bing">
+            <img src="../assets/images/icons/bing.svg" alt="Bing">
+          </div>
+          <div class="search-engine-option" data-engine="duckduckgo">
+            <img src="../assets/images/icons/duckduckgo.svg" alt="DuckDuckGo">
+          </div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search">
+        <button id="searchBtn" class="search-btn">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+      </div>
     </div>
 
     <div class="bookmarks" id="bookmarkList">
@@ -55,6 +73,10 @@
     </div>
   </div>
 
+  <!-- make this a module so we can import icons -->
+  <script type="module" src="home.js"></script>
+</body>
+</html>
   <!-- make this a module so we can import icons -->
   <script type="module" src="home.js"></script>
 </body>

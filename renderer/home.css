@@ -59,18 +59,26 @@ body, html {
   font-weight: bold;
 }
 
+/* Search bar container */
+.search-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+  width: 550px; /* Increased width for the new button */
+  max-width: 95vw;
+}
+
 /* Search bar */
 .search-bar {
   display: flex;
+  flex: 1; /* Allow search bar to take remaining space */
   align-items: center;
   background: #ffffff;
-  border-radius: 70px;
+  border-radius: 0 70px 70px 0; /* Curve right side */
   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
   padding: 0.25rem;
-  margin-bottom: 2rem;
-  width: 500px;
-  max-width: 90vw;
   overflow: hidden;
+  height: 54px; /* Match button height */
 }
 
 .search-bar input.search-input {
@@ -108,6 +116,64 @@ body, html {
 .search-bar button.search-btn:focus {
   outline: none;
   box-shadow: none;
+}
+
+/* Search Engine Selector */
+.search-engine-selector {
+  position: relative;
+}
+
+.search-engine-btn {
+  background: #ffffff;
+  border: none;
+  border-radius: 70px 0 0 70px; /* Curve left side */
+  padding: 0.25rem 0.5rem 0.25rem 1rem;
+  cursor: pointer;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.search-engine-btn img {
+  width: 24px;
+  height: 24px;
+}
+
+.search-engine-dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.search-engine-dropdown.hidden {
+  display: none;
+}
+
+.search-engine-option {
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-engine-option:hover {
+  background-color: #f0f0f0;
+}
+
+.search-engine-option img {
+  width: 24px;
+  height: 24px;
 }
 
 /* Bookmark grid */

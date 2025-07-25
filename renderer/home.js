@@ -10,11 +10,21 @@ const cancelBtn         = document.getElementById('cancelBtn');
 const addPopup          = document.getElementById('addPopup');
 const searchBtn         = document.getElementById('searchBtn');
 const searchInput       = document.getElementById('searchInput');
+const searchEngineBtn   = document.getElementById('searchEngineBtn');
+const searchEngineDropdown = document.getElementById('searchEngineDropdown');
+const searchEngineLogo  = document.getElementById('searchEngineLogo');
 const iconFilter       = document.getElementById('iconFilter');
 const iconGrid         = document.getElementById('iconGrid');
 const selectedIconInput= document.getElementById('selectedIcon');
 let selectedIcon       = initialIcons[0];
 let availableIcons     = initialIcons;
+
+const searchEngines = {
+  google: 'https://www.google.com/search?q=',
+  bing: 'https://www.bing.com/search?q=',
+  duckduckgo: 'https://duckduckgo.com/?q='
+};
+let selectedSearchEngine = 'google';
 
 let bookmarks = JSON.parse(localStorage.getItem(BOOKMARKS_KEY)) || [];
 
@@ -130,6 +140,29 @@ cancelBtn.onclick = () => {
   addPopup.classList.add('hidden');
 };
 
+// --- Search Engine Dropdown Logic ---
+searchEngineBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  searchEngineDropdown.classList.toggle('hidden');
+});
+
+document.addEventListener('click', () => {
+  if (!searchEngineDropdown.classList.contains('hidden')) {
+    searchEngineDropdown.classList.add('hidden');
+  }
+});
+
+searchEngineDropdown.addEventListener('click', (e) => {
+  const option = e.target.closest('.search-engine-option');
+  if (option) {
+    selectedSearchEngine = option.dataset.engine;
+    const newLogoSrc = option.querySelector('img').src;
+    searchEngineLogo.src = newLogoSrc;
+    searchEngineDropdown.classList.add('hidden');
+  }
+});
+// --- End Search Engine Dropdown Logic ---
+
 searchBtn.addEventListener('click', () => {
   const input = searchInput.value.trim();
   const hasProtocol = /^https?:\/\//i.test(input);
@@ -138,7 +171,8 @@ searchBtn.addEventListener('click', () => {
   if (looksLikeUrl) {
     target = hasProtocol ? input : `https://${input}`;
   } else {
-    target = `https://www.google.com/search?q=${encodeURIComponent(input)}`;
+    const searchEngineUrl = searchEngines[selectedSearchEngine];
+    target = `${searchEngineUrl}${encodeURIComponent(input)}`;
   }
   window.location.href = target;
 });
