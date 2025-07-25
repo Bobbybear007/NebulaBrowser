@@ -11,7 +11,7 @@
   "author": "Zambazos Media Group",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0",
+    "electron": "^37.2.4",
     "electron-builder": "^24.9.1"
   },
   "build": {
