@@ -1,38 +1,24 @@
 {
-  "name": "steamos-browser",
+  "name": "nebulabrowser",
   "version": "1.0.0",
-  "description": "A simple Electron browser optimized for SteamOS",
+  "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start" : "electron . --disable-gpu-sandbox"
   },
-  "author": "Zambazos Media Group",
-  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bobbybear007/NebulaBrowser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bobbybear007/NebulaBrowser/issues"
+  },
+  "homepage": "https://github.com/Bobbybear007/NebulaBrowser#readme",
   "devDependencies": {
-    "electron": "^37.2.4",
-    "electron-builder": "^24.9.1"
-  },
-  "build": {
-    "appId": "group.zambazosmedia.NebulaBrowser",
-    "productName": "NebulaBrowser",
-    "files": [
-      "main.js",
-      "preload.js",
-      "index.html",
-      "renderer.js",
-      "style.css",
-      "steamos.css"
-    ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "linux": {
-      "target": "AppImage"
-    }
+    "electron": "^37.2.4"
   }
 }

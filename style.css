@@ -1,0 +1,55 @@
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scroll, BrowserView will handle its own scroll */
+    background-color: #f0f0f0;
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #333;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    height: 60px; /* Adjust based on navBarHeight in main.js */
+    flex-shrink: 0; /* Prevent navbar from shrinking */
+}
+
+.navbar button {
+    background-color: #555;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s ease;
+}
+
+.navbar button:hover {
+    background-color: #777;
+}
+
+.navbar button:active {
+    background-color: #222;
+}
+
+.navbar #address-bar {
+    flex-grow: 1;
+    padding: 8px 10px;
+    border: 1px solid #777;
+    border-radius: 4px;
+    font-size: 16px;
+    background-color: #444;
+    color: white;
+    outline: none;
+}
+
+.navbar #address-bar:focus {
+    border-color: #007bff;
+}
