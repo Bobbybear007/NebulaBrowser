@@ -60,3 +60,8 @@ This will create a distributable file in the `dist` directory.
 
 This project is licensed under the MIT License. [Read More](documentation/MIT.md)
 
+
+## Documentation
+
+[MIT Licese](documentation/MIT.md)
+[GPU Fix](documentation/GPU-FIX_README.md)
