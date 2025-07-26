@@ -1,3 +1,4 @@
+// Use require('electron') since webviews have nodeIntegrationInSubFrames: true
 const { ipcRenderer } = require('electron');
 
 const clearBtn = document.getElementById('clear-data-btn');

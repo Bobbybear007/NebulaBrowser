@@ -82,20 +82,55 @@ function createWindow(startUrl) {
 
   // ensure all embedded <webview> tags also use the same window
   win.webContents.on('did-attach-webview', (event, webContents) => {
+    // Set up webview with preload script to provide electronAPI
+    webContents.on('dom-ready', () => {
+      webContents.executeJavaScript(`
+        window.electronAPI = {
+          invoke: (channel, ...args) => {
+            return new Promise((resolve, reject) => {
+              const { ipcRenderer } = require('electron');
+              ipcRenderer.invoke(channel, ...args).then(resolve).catch(reject);
+            });
+          }
+        };
+      `);
+    });
+
     // intercept window.open() inside webview
     webContents.setWindowOpenHandler(({ url }) => {
       webContents.loadURL(url);
+      // record history for webview navigations
+      recordHistory('site-history.json', url);
+      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
+      if (m && m[1]) {
+        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
+        recordHistory('search-history.json', query);
+      }
       return { action: 'deny' };
     });
     // intercept legacy new-window on webview
     webContents.on('new-window', (e, url) => {
       e.preventDefault();
       webContents.loadURL(url);
+      // record history for webview navigations
+      recordHistory('site-history.json', url);
+      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
+      if (m && m[1]) {
+        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
+        recordHistory('search-history.json', query);
+      }
     });
     // intercept navigation on webview (e.g. user clicks link)
     webContents.on('will-navigate', (e, url) => {
       e.preventDefault();
       webContents.loadURL(url);
+      // record history for webview navigations
+      recordHistory('site-history.json', url);
+      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
+      if (m && m[1]) {
+        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
+        recordHistory('search-history.json', query);
+      }
     });
   });
 
@@ -116,13 +151,28 @@ function createWindow(startUrl) {
 
   // record site and search history on every navigation
   const recordHistory = async (fileName, entry) => {
-    const filePath = path.join(__dirname, fileName);
-    let data = [];
-    try { data = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch {}
-    if (data[0] !== entry) {
-      data.unshift(entry);
-      if (data.length > 100) data.pop();
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    if (fileName === 'site-history.json') {
+      // Save to both file and send to renderer
+      const filePath = path.join(__dirname, fileName);
+      let data = [];
+      try { data = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch {}
+      if (data[0] !== entry) {
+        data.unshift(entry);
+        if (data.length > 100) data.pop();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+      }
+      // Also send to renderer for localStorage
+      win.webContents.send('record-site-history', entry);
+    } else {
+      // Keep search history in JSON file for now
+      const filePath = path.join(__dirname, fileName);
+      let data = [];
+      try { data = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch {}
+      if (data[0] !== entry) {
+        data.unshift(entry);
+        if (data.length > 100) data.pop();
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+      }
     }
   };
 
@@ -168,7 +218,10 @@ ipcMain.handle('window-close', event => {
 });
 
 // Add site and search history IPC handlers
+// Site history is now handled via localStorage in the renderer
+// But keep these handlers for compatibility and potential future use
 ipcMain.handle('load-site-history', async () => {
+  // Read from the site history file for settings page
   const filePath = path.join(__dirname, 'site-history.json');
   try {
     const data = fs.readFileSync(filePath, 'utf-8');
@@ -179,9 +232,20 @@ ipcMain.handle('load-site-history', async () => {
 });
 
 ipcMain.handle('save-site-history', async (event, history) => {
+  // Save to both file and localStorage
   const filePath = path.join(__dirname, 'site-history.json');
   try {
     fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    return true;
+  } catch (err) {
+    return false;
+  }
+});
+
+ipcMain.handle('clear-site-history', async () => {
+  const filePath = path.join(__dirname, 'site-history.json');
+  try {
+    fs.writeFileSync(filePath, JSON.stringify([], null, 2));
     return true;
   } catch (err) {
     return false;
@@ -268,4 +332,30 @@ ipcMain.handle('zoom-out', event => {
 // allow renderer to pop a tab into its own window
 ipcMain.handle('open-tab-in-new-window', (event, url) => {
   createWindow(url);
+});
+
+ipcMain.handle('save-site-history-entry', async (event, url) => {
+  const filePath = path.join(__dirname, 'site-history.json');
+  try {
+    let data = [];
+    try { 
+      data = JSON.parse(fs.readFileSync(filePath, 'utf8')); 
+    } catch {}
+    
+    // Remove if already exists to avoid duplicates
+    data = data.filter(item => item !== url);
+    // Add to beginning
+    data.unshift(url);
+    // Keep only last 100 entries
+    if (data.length > 100) {
+      data = data.slice(0, 100);
+    }
+    
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    console.log('[MAIN] Saved site history entry:', url);
+    return true;
+  } catch (err) {
+    console.error('[MAIN] Error saving site history entry:', err);
+    return false;
+  }
 });

@@ -6,13 +6,11 @@ A customizable and privacy-focused web browser built with Electron.
 
 ## Features
 
-*   **Custom Theming:** Personalize your browsing experience with custom themes.
 *   **Privacy Control:** Easily clear your browsing data, including history, cookies, and cache.
 *   **Tab Management:** Open new tabs, and manage them efficiently.
-*   **History:** Keeps track of your browsing and search history.
 *   **Bookmarks:** Save your favorite sites.
-*   **Custom Start Page:** Set your own home page.
-*   **Zoom Controls:** Adjust the zoom level of pages.
+
+
 
 ## Getting Started
 

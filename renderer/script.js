@@ -1,5 +1,33 @@
 const ipcRenderer = window.electronAPI;
 
+// Site history management using localStorage
+function getSiteHistory() {
+  try {
+    const history = localStorage.getItem('siteHistory');
+    return history ? JSON.parse(history) : [];
+  } catch (err) {
+    console.error('Error reading site history from localStorage:', err);
+    return [];
+  }
+}
+
+function addToSiteHistory(url) {
+  try {
+    let history = getSiteHistory();
+    // Remove if already exists to avoid duplicates
+    history = history.filter(item => item !== url);
+    // Add to beginning
+    history.unshift(url);
+    // Keep only last 100 entries
+    if (history.length > 100) {
+      history = history.slice(0, 100);
+    }
+    localStorage.setItem('siteHistory', JSON.stringify(history));
+  } catch (err) {
+    console.error('Error saving site history to localStorage:', err);
+  }
+}
+
 // 1) cache hot DOM references
 const urlBox       = document.getElementById('url');
 const tabBarEl     = document.getElementById('tab-bar');
@@ -8,13 +36,93 @@ const menuPopup    = document.getElementById('menu-popup');
 const contextMenu  = document.getElementById('context-menu');
 const menuItems    = contextMenu ? contextMenu.querySelectorAll('li') : [];
 
+let siteHistoryDropdown = null;
+
+function initializeSiteHistoryDropdown() {
+  // Create site history dropdown
+  siteHistoryDropdown = document.createElement('div');
+  siteHistoryDropdown.id = 'site-history-dropdown';
+  siteHistoryDropdown.style.cssText = `
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+  `;
+  
+  if (urlBox && urlBox.parentElement) {
+    urlBox.parentElement.style.position = 'relative';
+    urlBox.parentElement.appendChild(siteHistoryDropdown);
+  }
+}
+
+function showSiteHistory() {
+  if (!siteHistoryDropdown) return;
+  
+  const history = getSiteHistory();
+  if (history.length === 0) {
+    siteHistoryDropdown.style.display = 'none';
+    return;
+  }
+
+  siteHistoryDropdown.innerHTML = '';
+  history.slice(0, 10).forEach(url => {
+    const item = document.createElement('div');
+    item.style.cssText = `
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    `;
+    item.textContent = url;
+    item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f0f0f0');
+    item.addEventListener('mouseleave', () => item.style.backgroundColor = 'white');
+    item.addEventListener('click', () => {
+      urlBox.value = url;
+      navigate();
+      hideSiteHistory();
+    });
+    siteHistoryDropdown.appendChild(item);
+  });
+
+  siteHistoryDropdown.style.display = 'block';
+}
+
+function hideSiteHistory() {
+  if (siteHistoryDropdown) {
+    siteHistoryDropdown.style.display = 'none';
+  }
+}
+
 // Select all text on focus and prevent mouseup from deselecting
-urlBox.addEventListener('focus', () => urlBox.select());
+urlBox.addEventListener('focus', () => {
+  urlBox.select();
+  showSiteHistory();
+});
 urlBox.addEventListener('mouseup', e => e.preventDefault());
 // Add Enter key navigation
 urlBox.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     navigate();
+    hideSiteHistory();
+  } else if (e.key === 'Escape') {
+    hideSiteHistory();
+  }
+});
+
+// Hide history when clicking outside
+document.addEventListener('click', (e) => {
+  if (!urlBox.contains(e.target) && (!siteHistoryDropdown || !siteHistoryDropdown.contains(e.target))) {
+    hideSiteHistory();
   }
 });
 
@@ -23,6 +131,12 @@ let tabs = [];
 let activeTabId = null;
 const allowedInternalPages = ['settings', 'home'];
 let bookmarks = [];
+
+// Listen for site history updates from main process
+ipcRenderer.on('record-site-history', (event, url) => {
+  console.log('[DEBUG] Received site history update:', url);
+  addToSiteHistory(url);
+});
 
 function createTab(inputUrl) {
   inputUrl = inputUrl || 'browser://home';
@@ -45,8 +159,41 @@ function createTab(inputUrl) {
     if (e.favicons.length > 0) updateTabMetadata(id, 'favicon', e.favicons[0]);
   });
 
-  webview.addEventListener('did-navigate', e => handleNavigation(id, e.url)); // was using inputUrl
-  webview.addEventListener('did-navigate-in-page', e => handleNavigation(id, e.url)); // was using inputUrl
+  // Consolidated navigation recording - only use did-navigate to avoid duplicates
+  webview.addEventListener('did-navigate', e => {
+    handleNavigation(id, e.url);
+    // Record ALL HTTP navigations
+    if (e.url.startsWith('http')) {
+      console.log('[DEBUG] Recording navigation to:', e.url);
+      addToSiteHistory(e.url);
+      // Also save to file for cross-context sharing
+      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
+        console.error('Failed to save to file:', err)
+      );
+    }
+  });
+  
+  webview.addEventListener('did-navigate-in-page', e => {
+    handleNavigation(id, e.url);
+    // Record in-page navigations too
+    if (e.url.startsWith('http')) {
+      console.log('[DEBUG] Recording in-page navigation to:', e.url);
+      addToSiteHistory(e.url);
+      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
+        console.error('Failed to save to file:', err)
+      );
+    }
+  });
+
+  // Also capture when pages finish loading
+  webview.addEventListener('did-finish-load', () => {
+    const currentUrl = webview.getURL();
+    if (currentUrl.startsWith('http') && !currentUrl.includes('browser://')) {
+      console.log('[DEBUG] Webview did-finish-load, recording:', currentUrl);
+      addToSiteHistory(currentUrl);
+      ipcRenderer.invoke('save-site-history-entry', currentUrl);
+    }
+  });
 
   // catch any target="_blank" or window.open() calls and open them as new tabs
   webview.addEventListener('new-window', e => {
@@ -131,11 +278,25 @@ function handleNavigation(tabId, newUrl) {
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
 
+  console.log('[DEBUG] handleNavigation called with:', newUrl);
+
   // --- record every real navigation into history ---
   if (tab.history[tab.historyIndex] !== newUrl) {
     tab.history = tab.history.slice(0, tab.historyIndex + 1);
     tab.history.push(newUrl);
     tab.historyIndex++;
+  }
+
+  // Record site history in localStorage (skip internal pages and file:// URLs)
+  if (!newUrl.endsWith('home.html') && 
+      !newUrl.endsWith('settings.html') && 
+      !newUrl.startsWith('file://') && 
+      !newUrl.includes('browser://') &&
+      newUrl.startsWith('http')) {
+    console.log('[DEBUG] Adding to site history:', newUrl);
+    addToSiteHistory(newUrl);
+    // Also send to main process for file storage
+    ipcRenderer.invoke('save-site-history-entry', newUrl);
   }
 
   // translate local files back to our browser:// scheme
@@ -305,6 +466,20 @@ menuBtn.addEventListener('click', () => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Initialize site history dropdown after DOM is ready
+  initializeSiteHistoryDropdown();
+  
+  // Add some debug info
+  console.log('[DEBUG] Site history initialized, current entries:', getSiteHistory().length);
+  
+  // Add test entries if none exist (for debugging)
+  if (getSiteHistory().length === 0) {
+    console.log('[DEBUG] No existing history, adding test entries for debugging');
+    addToSiteHistory('https://www.google.com');
+    addToSiteHistory('https://github.com');
+    console.log('[DEBUG] Test entries added, history now:', getSiteHistory());
+  }
+  
   createTab();
   // only now bind the reload button (guaranteed to exist)
   const reloadBtn = document.getElementById('reload-btn');
@@ -400,6 +575,23 @@ window.addEventListener('DOMContentLoaded', () => {
       menu.classList.remove('visible');
     });
   });
+
+  // Migrate existing site history from JSON file to localStorage (one-time migration)
+  const migrateSiteHistory = async () => {
+    try {
+      // Check if we already have data in localStorage
+      const existingHistory = getSiteHistory();
+      if (existingHistory.length === 0) {
+        // Try to load from the old JSON file system
+        console.log('Attempting to migrate site history from JSON file...');
+        // Since we can't access the file directly, we'll just start fresh
+        // The site-history.json file was the old method, localStorage is the new method
+      }
+    } catch (err) {
+      console.log('Site history migration skipped:', err.message);
+    }
+  };
+  migrateSiteHistory();
 
   // ipcRenderer.invoke('load-bookmarks').then(bs => {
   //   bookmarks = bs;

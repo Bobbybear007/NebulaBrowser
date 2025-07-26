@@ -11,6 +11,7 @@
     h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
     ul { list-style: none; padding-left: 0; }
     li { padding: 5px 0; border-bottom: 1px solid #eee; }
+    .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -23,6 +24,21 @@
     </div>
 
     <p class="note">Settings are stored locally on this device.</p>
+
+    <div class="debug-info" id="debug-info">Loading debug info...</div>
+
+    <!-- add history views -->
+    <section>
+      <h2>Search History</h2>
+      <ul id="search-history-list"></ul>
+      <button id="clear-search-history-btn" style="margin-top: 10px;">Clear Search History</button>
+    </section>
+    <section>
+      <h2>Site History</h2>
+      <ul id="site-history-list"></ul>
+      <button id="clear-site-history-btn" style="margin-top: 10px;">Clear Site History</button>
+      <button id="add-test-history-btn" style="margin-top: 10px; margin-left: 10px;">Add Test History</button>
+    </section>
   </div>
 
   <!-- status overlay moved outside of .container -->
@@ -31,44 +47,185 @@
     <span id="status-text"></span>
   </div>
 
-
-
   <script src="settings.js"></script>
   <script>
-    const { ipcRenderer } = require('electron');
+    // Update debug info
+    function updateDebugInfo() {
+      const debugDiv = document.getElementById('debug-info');
+      const localStorage = window.localStorage;
+      const hasElectronAPI = !!window.electronAPI;
+      const siteHistory = localStorage ? localStorage.getItem('siteHistory') : 'N/A';
+      
+      debugDiv.innerHTML = `
+        localStorage available: ${!!localStorage}<br>
+        electronAPI available: ${hasElectronAPI}<br>
+        siteHistory in localStorage: ${siteHistory || 'null'}<br>
+        Current domain: ${window.location.hostname}<br>
+        Current protocol: ${window.location.protocol}
+      `;
+    }
 
-    async function loadHistories() {
+    // Get site history from localStorage in this webview context
+    function getSiteHistoryFromLocalStorage() {
       try {
-        const searchHistory = await ipcRenderer.invoke('load-search-history');
-        const siteHistory = await ipcRenderer.invoke('load-site-history');
-
-        const searchList = document.getElementById('search-history-list');
-        const siteList = document.getElementById('site-history-list');
-
-        // Clear existing content
-        searchList.innerHTML = '';
-        siteList.innerHTML = '';
-
-        // Populate search history
-        searchHistory.forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = item;
-          searchList.appendChild(li);
-        });
-
-        // Populate site history
-        siteHistory.forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = item;
-          siteList.appendChild(li);
-        });
-      } catch(err) {
-        console.error('Error loading histories:', err);
+        const history = localStorage.getItem('siteHistory');
+        console.log('[SETTINGS DEBUG] localStorage siteHistory:', history);
+        return history ? JSON.parse(history) : [];
+      } catch (err) {
+        console.error('[SETTINGS DEBUG] Error reading from localStorage:', err);
+        return [];
       }
     }
 
-    // Load histories on page load.
-    window.addEventListener('DOMContentLoaded', loadHistories);
+    // Sync site history from main browser's localStorage to this webview's localStorage
+    function syncSiteHistoryFromMain() {
+      try {
+        // Try to get the parent window's localStorage
+        if (window.parent && window.parent !== window) {
+          const parentHistory = window.parent.localStorage.getItem('siteHistory');
+          if (parentHistory) {
+            localStorage.setItem('siteHistory', parentHistory);
+            console.log('[SETTINGS DEBUG] Synced history from parent window');
+            return JSON.parse(parentHistory);
+          }
+        }
+        return [];
+      } catch (err) {
+        console.log('[SETTINGS DEBUG] Could not sync from parent:', err.message);
+        return [];
+      }
+    }
+
+    function addTestHistory() {
+      const testSites = [
+        'https://www.google.com',
+        'https://github.com',
+        'https://stackoverflow.com',
+        'https://developer.mozilla.org',
+        'https://www.wikipedia.org'
+      ];
+      
+      testSites.forEach(site => {
+        try {
+          let history = getSiteHistoryFromLocalStorage();
+          history = history.filter(item => item !== site);
+          history.unshift(site);
+          localStorage.setItem('siteHistory', JSON.stringify(history));
+          console.log('[SETTINGS DEBUG] Added test site:', site);
+        } catch (err) {
+          console.error('Error adding test history:', err);
+        }
+      });
+      
+      loadHistories();
+    }
+
+    async function loadHistories() {
+      try {
+        console.log('[SETTINGS DEBUG] Loading histories...');
+        updateDebugInfo();
+        
+        // First try to sync from parent window
+        let siteHistory = syncSiteHistoryFromMain();
+        
+        // If that didn't work, get from local storage
+        if (siteHistory.length === 0) {
+          siteHistory = getSiteHistoryFromLocalStorage();
+        }
+
+        // Try to get search history via message passing to parent or direct file access
+        let searchHistory = [];
+
+        const searchList = document.getElementById('search-history-list');
+        const siteList   = document.getElementById('site-history-list');
+
+        // Clear existing content
+        searchList.innerHTML = '';
+        siteList.innerHTML   = '';
+
+        // Populate search history
+        const searchLi = document.createElement('li');
+        searchLi.textContent = 'Search history not available in webview context';
+        searchLi.style.fontStyle = 'italic';
+        searchLi.style.color = '#666';
+        searchList.appendChild(searchLi);
+
+        // Populate site history
+        if (siteHistory && siteHistory.length > 0) {
+          console.log('[SETTINGS DEBUG] Displaying', siteHistory.length, 'site history items');
+          siteHistory.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            li.style.wordBreak = 'break-all';
+            siteList.appendChild(li);
+          });
+        } else {
+          console.log('[SETTINGS DEBUG] No site history to display');
+          const li = document.createElement('li');
+          li.textContent = 'No browsing history found. Browse some websites first!';
+          li.style.fontStyle = 'italic';
+          li.style.color = '#666';
+          siteList.appendChild(li);
+        }
+      } catch(err) {
+        console.error('[SETTINGS DEBUG] Error loading histories:', err);
+        
+        const searchList = document.getElementById('search-history-list');
+        const siteList   = document.getElementById('site-history-list');
+        
+        const errorLi1 = document.createElement('li');
+        errorLi1.textContent = 'Error loading search history: ' + err.message;
+        errorLi1.style.color = 'red';
+        searchList.appendChild(errorLi1);
+        
+        const errorLi2 = document.createElement('li');
+        errorLi2.textContent = 'Error loading site history: ' + err.message;
+        errorLi2.style.color = 'red';
+        siteList.appendChild(errorLi2);
+      }
+    }
+
+    async function clearSiteHistory() {
+      try {
+        // Clear from localStorage
+        localStorage.removeItem('siteHistory');
+        console.log('[SETTINGS DEBUG] Cleared site history from localStorage');
+        
+        loadHistories(); // Refresh the display
+      } catch (err) {
+        console.error('Error clearing site history:', err);
+      }
+    }
+
+    async function clearSearchHistory() {
+      console.log('Search history clearing not available in webview context');
+    }
+
+    // Load histories on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[SETTINGS DEBUG] DOM loaded, window.electronAPI:', !!window.electronAPI);
+      loadHistories();
+      
+      // Refresh history every few seconds to pick up new browsing
+      setInterval(loadHistories, 3000);
+      
+      // Add test history button functionality
+      const addTestBtn = document.getElementById('add-test-history-btn');
+      if (addTestBtn) {
+        addTestBtn.addEventListener('click', addTestHistory);
+      }
+      
+      // Add clear buttons functionality
+      const clearSiteBtn = document.getElementById('clear-site-history-btn');
+      const clearSearchBtn = document.getElementById('clear-search-history-btn');
+      
+      if (clearSiteBtn) {
+        clearSiteBtn.addEventListener('click', clearSiteHistory);
+      }
+      if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', clearSearchHistory);
+      }
+    });
   </script>
 </body>
 </html>
