@@ -30,9 +30,9 @@ A customizable and privacy-focused web browser built with Electron.
     ```sh
     cd NebulaBrowser
     ```
-3.  Install dependencies:
+3.  Install Electron:
     ```sh
-    npm install
+    npm install --save-dev electron@latest
     ```
 
 ### Running the Application
