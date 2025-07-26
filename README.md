@@ -60,5 +60,5 @@ This will create a distributable file in the `dist` directory.
 
 ## License
 
-This project is licensed under the ISC License.
+This project is licensed under the MIT License. [Read More](documentation/MIT.md)
 
