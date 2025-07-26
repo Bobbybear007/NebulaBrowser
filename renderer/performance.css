@@ -1,0 +1,72 @@
+/* Performance optimizations for renderer CSS - GPU Error 18 compatible */
+
+/* Conservative hardware acceleration for animations */
+.tab, .bookmark, .icon-item {
+  /* Only enable will-change when actually needed */
+  transform: translateZ(0);
+}
+
+.tab:hover, .bookmark:hover, .icon-item:hover {
+  will-change: transform;
+}
+
+.tab:not(:hover), .bookmark:not(:hover), .icon-item:not(:hover) {
+  will-change: auto;
+}
+
+/* Optimize scrolling - more conservative approach */
+#webviews, #bookmarkList, #iconGrid {
+  -webkit-overflow-scrolling: touch;
+  /* Use layout containment only, avoid paint containment which can cause GPU issues */
+  contain: layout style;
+}
+
+/* Use CSS containment for better performance - conservative approach */
+.tab-content {
+  contain: layout style;
+}
+
+/* Optimize transitions - reduced complexity */
+.tab {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reduce paint areas - more conservative transforms */
+.tab:hover, .bookmark:hover {
+  transform: scale(1.01); /* Reduced scale to minimize GPU load */
+}
+
+/* Use efficient selectors */
+.material-symbols-outlined {
+  font-display: swap;
+}
+
+/* Optimize text rendering - conservative settings */
+body {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Conditional subpixel rendering for retina displays */
+@media (-webkit-min-device-pixel-ratio: 2) {
+  body {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+}
+
+/* Additional GPU-safe optimizations */
+* {
+  /* Prevent unnecessary repaints */
+  backface-visibility: hidden;
+}
+
+/* Safe animation performance */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
