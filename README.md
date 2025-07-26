@@ -64,4 +64,4 @@ This project is licensed under the MIT License. [Read More](documentation/MIT.md
 ## Documentation
 
 * [MIT Licese](documentation/MIT.md)
-* [GPU Fix](documentation/GPU-FIX_README.md)
+* [GPU Fix](documentation/GPU-FIX-README.md)
