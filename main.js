@@ -24,6 +24,8 @@ ipcMain.removeHandler('window-minimize');
 ipcMain.removeHandler('window-maximize');
 ipcMain.removeHandler('window-close');
 
+
+
 function createWindow(startUrl) {
   // Get the available screen size
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -51,7 +53,9 @@ function createWindow(startUrl) {
     },
     fullscreen: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'assets/images/Logos/Nebula-favicon.png'),
+    icon: process.platform === 'darwin' 
+      ? path.join(__dirname, 'assets/images/Logos/Nebula-Favicon.icns')
+      : path.join(__dirname, 'assets/images/Logos/Nebula-favicon.png'),
     title: 'Nebula',
   };
 
