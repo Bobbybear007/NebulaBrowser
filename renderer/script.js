@@ -36,96 +36,17 @@ const menuPopup    = document.getElementById('menu-popup');
 const contextMenu  = document.getElementById('context-menu');
 const menuItems    = contextMenu ? contextMenu.querySelectorAll('li') : [];
 
-let siteHistoryDropdown = null;
-
-function initializeSiteHistoryDropdown() {
-  // Create site history dropdown
-  siteHistoryDropdown = document.createElement('div');
-  siteHistoryDropdown.id = 'site-history-dropdown';
-  siteHistoryDropdown.style.cssText = `
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ccc;
-    border-top: none;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-    display: none;
-  `;
-  
-  if (urlBox && urlBox.parentElement) {
-    urlBox.parentElement.style.position = 'relative';
-    urlBox.parentElement.appendChild(siteHistoryDropdown);
-  }
-}
-
-function showSiteHistory() {
-  if (!siteHistoryDropdown) return;
-  
-  const history = getSiteHistory();
-  if (history.length === 0) {
-    siteHistoryDropdown.style.display = 'none';
-    return;
-  }
-
-  siteHistoryDropdown.innerHTML = '';
-  history.slice(0, 10).forEach(url => {
-    const item = document.createElement('div');
-    item.style.cssText = `
-      padding: 8px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    `;
-    item.textContent = url;
-    item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f0f0f0');
-    item.addEventListener('mouseleave', () => item.style.backgroundColor = 'white');
-    item.addEventListener('click', () => {
-      urlBox.value = url;
-      navigate();
-      hideSiteHistory();
-    });
-    siteHistoryDropdown.appendChild(item);
-  });
-
-  siteHistoryDropdown.style.display = 'block';
-}
-
-function hideSiteHistory() {
-  if (siteHistoryDropdown) {
-    siteHistoryDropdown.style.display = 'none';
-  }
-}
-
 // Select all text on focus and prevent mouseup from deselecting
 urlBox.addEventListener('focus', () => {
   urlBox.select();
-  showSiteHistory();
 });
 urlBox.addEventListener('mouseup', e => e.preventDefault());
 // Add Enter key navigation
 urlBox.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     navigate();
-    hideSiteHistory();
-  } else if (e.key === 'Escape') {
-    hideSiteHistory();
   }
 });
-
-// Hide history when clicking outside
-document.addEventListener('click', (e) => {
-  if (!urlBox.contains(e.target) && (!siteHistoryDropdown || !siteHistoryDropdown.contains(e.target))) {
-    hideSiteHistory();
-  }
-});
-
 
 let tabs = [];
 let activeTabId = null;
@@ -466,9 +387,6 @@ menuBtn.addEventListener('click', () => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Initialize site history dropdown after DOM is ready
-  initializeSiteHistoryDropdown();
-  
   // Add some debug info
   console.log('[DEBUG] Site history initialized, current entries:', getSiteHistory().length);
   
