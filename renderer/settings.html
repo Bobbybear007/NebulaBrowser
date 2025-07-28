@@ -9,9 +9,193 @@
     body { font-family: sans-serif; padding: 20px; }
     section { margin-bottom: 30px; }
     h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+    h3 { margin: 15px 0 10px 0; color: var(--accent); font-size: 1.1rem; }
     ul { list-style: none; padding-left: 0; }
     li { padding: 5px 0; border-bottom: 1px solid #eee; }
     .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; }
+    
+    /* Customization Styles */
+    .customization-group {
+      margin-bottom: 25px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+    
+    .theme-selector {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .theme-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text);
+    }
+    
+    .theme-btn:hover {
+      border-color: var(--accent);
+    }
+    
+    .theme-btn.active {
+      border-color: var(--primary);
+      background: rgba(123, 46, 255, 0.1);
+    }
+    
+    .theme-preview {
+      width: 60px;
+      height: 40px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .color-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    
+    .color-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .color-group label {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    
+    .color-group input[type="color"] {
+      width: 100%;
+      height: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+    }
+    
+    .layout-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .layout-options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+      transition: background 0.2s ease;
+    }
+    
+    .layout-options label:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .logo-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .logo-options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .logo-options input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: var(--text);
+    }
+    
+    .theme-management {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .theme-management button {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    
+    .theme-management button:hover {
+      background: var(--accent);
+    }
+    
+    .theme-management button:last-child {
+      background: #e53e3e;
+    }
+    
+    .theme-management button:last-child:hover {
+      background: #c53030;
+    }
+    
+    .preview-container {
+      background: var(--dark-blue);
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .preview-home {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      padding: 20px;
+      background: var(--bg);
+      border-radius: 8px;
+      min-height: 200px;
+    }
+    
+    .preview-logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--primary);
+    }
+    
+    .preview-search {
+      width: 60%;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .preview-bookmarks {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .preview-bookmark {
+      width: 50px;
+      height: 50px;
+      background: var(--accent);
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -26,6 +210,123 @@
     <p class="note">Settings are stored locally on this device.</p>
 
     <div class="debug-info" id="debug-info">Loading debug info...</div>
+
+    <!-- Customization Section -->
+    <section>
+      <h2>🎨 Browser Customization</h2>
+      
+      <!-- Theme Selection -->
+      <div class="customization-group">
+        <h3>Theme Presets</h3>
+        <div class="theme-selector">
+          <button id="theme-default" class="theme-btn active" data-theme="default">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #121418, #1B1035);"></div>
+            <span>Default</span>
+          </button>
+          <button id="theme-ocean" class="theme-btn" data-theme="ocean">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #1a365d, #2c5282);"></div>
+            <span>Ocean</span>
+          </button>
+          <button id="theme-forest" class="theme-btn" data-theme="forest">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #1a202c, #2d3748);"></div>
+            <span>Forest</span>
+          </button>
+          <button id="theme-sunset" class="theme-btn" data-theme="sunset">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #744210, #c05621);"></div>
+            <span>Sunset</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Color Customization -->
+      <div class="customization-group">
+        <h3>Custom Colors</h3>
+        <div class="color-controls">
+          <div class="color-group">
+            <label for="bg-color">Background:</label>
+            <input type="color" id="bg-color" value="#121418">
+          </div>
+          <div class="color-group">
+            <label for="gradient-color">Gradient End:</label>
+            <input type="color" id="gradient-color" value="#1B1035">
+          </div>
+          <div class="color-group">
+            <label for="accent-color">Accent:</label>
+            <input type="color" id="accent-color" value="#7B2EFF">
+          </div>
+          <div class="color-group">
+            <label for="secondary-color">Secondary:</label>
+            <input type="color" id="secondary-color" value="#00C6FF">
+          </div>
+          <div class="color-group">
+            <label for="text-color">Text:</label>
+            <input type="color" id="text-color" value="#E0E0E0">
+          </div>
+        </div>
+      </div>
+
+      <!-- Home Page Layout -->
+      <div class="customization-group">
+        <h3>Home Page Layout</h3>
+        <div class="layout-options">
+          <label>
+            <input type="radio" name="layout" value="centered" checked>
+            <span>Centered (Default)</span>
+          </label>
+          <label>
+            <input type="radio" name="layout" value="sidebar">
+            <span>Sidebar Navigation</span>
+          </label>
+          <label>
+            <input type="radio" name="layout" value="compact">
+            <span>Compact View</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Logo Customization -->
+      <div class="customization-group">
+        <h3>Logo & Branding</h3>
+        <div class="logo-options">
+          <label for="show-logo">
+            <input type="checkbox" id="show-logo" checked>
+            Show Nebula Logo
+          </label>
+          <label for="custom-title">
+            Custom Title:
+            <input type="text" id="custom-title" placeholder="Nebula Browser" maxlength="50">
+          </label>
+        </div>
+      </div>
+
+      <!-- Theme Management -->
+      <div class="customization-group">
+        <h3>Theme Management</h3>
+        <div class="theme-management">
+          <button id="save-custom-theme">Save Current as Custom Theme</button>
+          <button id="export-theme">Export Theme</button>
+          <button id="import-theme">Import Theme</button>
+          <input type="file" id="theme-file-input" accept=".json" style="display: none;">
+          <button id="reset-to-default">Reset to Default</button>
+        </div>
+      </div>
+
+      <!-- Live Preview -->
+      <div class="customization-group">
+        <h3>Preview</h3>
+        <div class="preview-container" id="preview-container">
+          <div class="preview-home">
+            <div class="preview-logo">🌌 Nebula</div>
+            <div class="preview-search"></div>
+            <div class="preview-bookmarks">
+              <div class="preview-bookmark"></div>
+              <div class="preview-bookmark"></div>
+              <div class="preview-bookmark"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- add history views -->
     <section>
@@ -48,7 +349,13 @@
   </div>
 
   <script src="settings.js"></script>
+  <script src="customization.js"></script>
   <script>
+    // Apply saved theme immediately when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      BrowserCustomizer.applyThemeToPage();
+    });
+
     // Update debug info
     function updateDebugInfo() {
       const debugDiv = document.getElementById('debug-info');

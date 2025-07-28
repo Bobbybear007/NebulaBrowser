@@ -1,0 +1,17 @@
+{
+  "name": "Sunset Glow",
+  "colors": {
+    "bg": "#744210",
+    "darkBlue": "#975a16",
+    "darkPurple": "#c05621",
+    "primary": "#ed8936",
+    "accent": "#fbb040",
+    "text": "#fffaf0"
+  },
+  "layout": "centered",
+  "showLogo": true,
+  "customTitle": "Nebula Browser",
+  "gradient": "linear-gradient(145deg, #744210 0%, #c05621 100%)",
+  "version": "1.0",
+  "description": "A warm sunset theme with oranges and golden hues"
+}

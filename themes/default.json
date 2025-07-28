@@ -1,0 +1,17 @@
+{
+  "name": "Default Nebula",
+  "colors": {
+    "bg": "#121418",
+    "darkBlue": "#0B1C2B",
+    "darkPurple": "#1B1035",
+    "primary": "#7B2EFF",
+    "accent": "#00C6FF",
+    "text": "#E0E0E0"
+  },
+  "layout": "centered",
+  "showLogo": true,
+  "customTitle": "Nebula Browser",
+  "gradient": "linear-gradient(145deg, #121418 0%, #1B1035 100%)",
+  "version": "1.0",
+  "description": "The original Nebula Browser theme with purple and blue gradients"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Forest Night",
+  "colors": {
+    "bg": "#1a202c",
+    "darkBlue": "#2d3748",
+    "darkPurple": "#4a5568",
+    "primary": "#68d391",
+    "accent": "#9ae6b4",
+    "text": "#f7fafc"
+  },
+  "layout": "centered",
+  "showLogo": true,
+  "customTitle": "Nebula Browser",
+  "gradient": "linear-gradient(145deg, #1a202c 0%, #2d3748 100%)",
+  "version": "1.0",
+  "description": "A nature-inspired theme with forest greens and earth tones"
+}

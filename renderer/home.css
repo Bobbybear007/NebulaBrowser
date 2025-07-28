@@ -6,6 +6,16 @@
   font-display: swap;
 }
 
+/* CSS Custom Properties for Theming */
+:root {
+  --bg: #121418;
+  --dark-blue: #0B1C2B;
+  --dark-purple: #1B1035;
+  --primary: #7B2EFF;
+  --accent: #00C6FF;
+  --text: #E0E0E0;
+}
+
 /* Base reset */
 * {
   margin: 0;
@@ -13,13 +23,12 @@
   box-sizing: border-box;
 }
 
-
 body, html {
-  /* replace solid bg with a subtle gradient */
+  /* Use CSS custom properties for theming */
   margin: 0;
   padding: 0;
   height: 100%;
-  background: linear-gradient(145deg, #121418 0%, #1B1035 100%);
+  background: linear-gradient(145deg, var(--bg) 0%, var(--dark-purple) 100%);
   color: var(--text);
   overflow: hidden;
   font-family: 'InterVariable', sans-serif;
@@ -57,6 +66,7 @@ body, html {
 .logo-text {
   font-size: 2rem;
   font-weight: bold;
+  color: var(--primary);
 }
 
 /* Search bar container */

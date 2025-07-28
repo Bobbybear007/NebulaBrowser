@@ -46,6 +46,19 @@ For advanced users, Nebula provides tools to manage GPU acceleration.
 -   **GPU Diagnostics:** View detailed information about your system's GPU and its status.
 -   **GPU Fallback:** If you experience rendering issues, you can apply a GPU fallback to use a more stable rendering path. This can help resolve visual glitches or crashes.
 
+### Custom Themes & Customization
+
+Nebula offers extensive customization options to personalize your browsing experience.
+
+-   **Theme System:** Choose from built-in themes (default, forest, ocean, sunset) or create your own custom themes.
+-   **Live Theme Editor:** Modify colors, gradients, and layout options with real-time preview in the settings.
+-   **Import/Export Themes:** Share custom themes with the community or use themes created by other users.
+-   **Non-Destructive Design:** All customizations are stored separately and can be reset to default at any time.
+-   **Layout Options:** Switch between centered, sidebar, and compact view layouts.
+-   **Custom Branding:** Personalize the browser title and logo visibility.
+
+For detailed information about creating and managing themes, see the [Customization Guide](Customization.md).
+
 ### Cross-Platform
 
 Nebula is built with Electron, allowing it to run on multiple operating systems.

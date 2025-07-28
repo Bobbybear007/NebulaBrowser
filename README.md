@@ -94,6 +94,7 @@ This project is licensed under the MIT License. [Read More](documentation/MIT.md
 * [MIT Licese](documentation/MIT.md)
 * [GPU Fix](documentation/GPU-FIX-README.md)
 * [Features](documentation/FEATURES.md)
+* [Customization](documentation/Customization.md)
 * [Project Structure](documentation/PROJECT_STRUCTURE.md)
 * [Core Concepts](documentation/CORE_CONCEPTS.md)
 * [Contributing Guide](documentation/CONTRIBUTING.md)

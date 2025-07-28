@@ -73,10 +73,43 @@
     </div>
   </div>
 
-  <!-- make this a module so we can import icons -->
-  <script type="module" src="home.js"></script>
-</body>
-</html>
+  <!-- Theme loader script -->
+  <script src="customization.js"></script>
+  <script>
+    // Apply saved theme on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      BrowserCustomizer.applyThemeToPage();
+      
+      // Listen for theme updates from settings
+      window.addEventListener('message', (event) => {
+        if (event.data.type === 'theme-update') {
+          const theme = event.data.theme;
+          localStorage.setItem('currentTheme', JSON.stringify(theme));
+          BrowserCustomizer.applyThemeToPage();
+          
+          // Update logo and title if needed
+          updateLogoAndTitle(theme);
+        }
+      });
+      
+      // Update logo and title based on theme
+      function updateLogoAndTitle(theme) {
+        const logoText = document.querySelector('.logo-text');
+        const logoImg = document.querySelector('.logo-img');
+        
+        if (logoText) {
+          logoText.textContent = theme.customTitle || 'Nebula Browser';
+        }
+        
+        if (!theme.showLogo && logoImg) {
+          logoImg.style.display = 'none';
+        } else if (logoImg) {
+          logoImg.style.display = 'block';
+        }
+      }
+    });
+  </script>
+
   <!-- make this a module so we can import icons -->
   <script type="module" src="home.js"></script>
 </body>

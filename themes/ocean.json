@@ -1,0 +1,17 @@
+{
+  "name": "Ocean Depths",
+  "colors": {
+    "bg": "#1a365d",
+    "darkBlue": "#2a4365",
+    "darkPurple": "#2c5282",
+    "primary": "#3182ce",
+    "accent": "#00d9ff",
+    "text": "#e2e8f0"
+  },
+  "layout": "centered",
+  "showLogo": true,
+  "customTitle": "Nebula Browser",
+  "gradient": "linear-gradient(145deg, #1a365d 0%, #2c5282 100%)",
+  "version": "1.0",
+  "description": "A calming ocean-inspired theme with blues and teals"
+}
