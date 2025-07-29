@@ -19,7 +19,13 @@
     "appId": "com.andrewzambazos.nebula",
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "assets/images/Logos/Nebula-Icon.ico"
+      "icon": "assets/images/Logos/Nebula-Favicon.icns"
+    },
+    "win": {
+      "icon": "assets/images/Logos/Nebula-Favicon.ico"
+    },
+    "linux": {
+      "icon": "assets/images/Logos/Nebula-Favicon.png"
     }
   }
 }
