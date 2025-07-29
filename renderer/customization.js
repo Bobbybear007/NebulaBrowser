@@ -67,6 +67,126 @@ class BrowserCustomizer {
         showLogo: true,
         customTitle: 'Nebula Browser',
         gradient: 'linear-gradient(145deg, #744210 0%, #c05621 100%)'
+      },
+      cyberpunk: {
+        name: 'Cyberpunk Neon',
+        colors: {
+          bg: '#0a0a0a',
+          darkBlue: '#1a0520',
+          darkPurple: '#2a0a3a',
+          primary: '#ff0080',
+          accent: '#00ffff',
+          text: '#ffffff'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #0a0a0a 0%, #2a0a3a 50%, #1a0520 100%)'
+      },
+      'midnight-rose': {
+        name: 'Midnight Rose',
+        colors: {
+          bg: '#1c1820',
+          darkBlue: '#2d2433',
+          darkPurple: '#3d3046',
+          primary: '#d4af37',
+          accent: '#ffd700',
+          text: '#f5f5dc'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #1c1820 0%, #3d3046 100%)'
+      },
+      'arctic-ice': {
+        name: 'Arctic Ice',
+        colors: {
+          bg: '#f0f8ff',
+          darkBlue: '#e6f3ff',
+          darkPurple: '#d1e7ff',
+          primary: '#4169e1',
+          accent: '#87ceeb',
+          text: '#2f4f4f'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #f0f8ff 0%, #d1e7ff 100%)'
+      },
+      'cherry-blossom': {
+        name: 'Cherry Blossom',
+        colors: {
+          bg: '#fff5f8',
+          darkBlue: '#ffe4e8',
+          darkPurple: '#ffd4db',
+          primary: '#ff69b4',
+          accent: '#ffb6c1',
+          text: '#8b4513'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #fff5f8 0%, #ffd4db 100%)'
+      },
+      'cosmic-purple': {
+        name: 'Cosmic Purple',
+        colors: {
+          bg: '#0f0524',
+          darkBlue: '#1a0b3d',
+          darkPurple: '#2d1b69',
+          primary: '#8a2be2',
+          accent: '#da70d6',
+          text: '#e6e6fa'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #0f0524 0%, #2d1b69 50%, #4b0082 100%)'
+      },
+      'emerald-dream': {
+        name: 'Emerald Dream',
+        colors: {
+          bg: '#0d2818',
+          darkBlue: '#1a3a2e',
+          darkPurple: '#2d5a44',
+          primary: '#50c878',
+          accent: '#98fb98',
+          text: '#f0fff0'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #0d2818 0%, #2d5a44 100%)'
+      },
+      'mocha-coffee': {
+        name: 'Mocha Coffee',
+        colors: {
+          bg: '#3c2414',
+          darkBlue: '#4a2c1a',
+          darkPurple: '#5d3a26',
+          primary: '#d2691e',
+          accent: '#daa520',
+          text: '#faf0e6'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #3c2414 0%, #5d3a26 100%)'
+      },
+      'lavender-fields': {
+        name: 'Lavender Fields',
+        colors: {
+          bg: '#f8f4ff',
+          darkBlue: '#ede4ff',
+          darkPurple: '#e6d8ff',
+          primary: '#9370db',
+          accent: '#dda0dd',
+          text: '#4b0082'
+        },
+        layout: 'centered',
+        showLogo: true,
+        customTitle: 'Nebula Browser',
+        gradient: 'linear-gradient(145deg, #f8f4ff 0%, #e6d8ff 100%)'
       }
     };
 

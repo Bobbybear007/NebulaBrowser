@@ -39,7 +39,20 @@ class ThemeManager {
 
   loadDefaultThemes() {
     const defaultThemes = {};
-    const defaultFiles = ['default.json', 'ocean.json', 'forest.json', 'sunset.json'];
+    const defaultFiles = [
+      'default.json', 
+      'ocean.json', 
+      'forest.json', 
+      'sunset.json',
+      'cyberpunk.json',
+      'midnight-rose.json',
+      'arctic-ice.json',
+      'cherry-blossom.json',
+      'cosmic-purple.json',
+      'emerald-dream.json',
+      'mocha-coffee.json',
+      'lavender-fields.json'
+    ];
     
     defaultFiles.forEach(file => {
       try {

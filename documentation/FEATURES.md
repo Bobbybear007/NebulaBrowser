@@ -50,7 +50,7 @@ For advanced users, Nebula provides tools to manage GPU acceleration.
 
 Nebula offers extensive customization options to personalize your browsing experience.
 
--   **Theme System:** Choose from built-in themes (default, forest, ocean, sunset) or create your own custom themes.
+-   **Theme System:** Choose from built-in themes (default, forest, ocean, sunset, cyberpunk, midnight-rose, arctic-ice, cherry-blossom, cosmic-purple, emerald-dream, mocha-coffee, lavender-fields) or create your own custom themes.
 -   **Live Theme Editor:** Modify colors, gradients, and layout options with real-time preview in the settings.
 -   **Import/Export Themes:** Share custom themes with the community or use themes created by other users.
 -   **Non-Destructive Design:** All customizations are stored separately and can be reset to default at any time.

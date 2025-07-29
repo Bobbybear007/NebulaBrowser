@@ -23,9 +23,10 @@
     }
     
     .theme-selector {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      padding: 10px 0;
     }
     
     .theme-btn {
@@ -33,13 +34,16 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      padding: 10px;
+      padding: 12px 8px;
       background: transparent;
       border: 2px solid transparent;
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
       color: var(--text);
+      text-align: center;
+      font-size: 0.85rem;
+      min-height: 90px;
     }
     
     .theme-btn:hover {
@@ -56,6 +60,20 @@
       height: 40px;
       border-radius: 4px;
       border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .theme-preview::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      pointer-events: none;
     }
     
     .color-controls {
@@ -234,6 +252,38 @@
           <button id="theme-sunset" class="theme-btn" data-theme="sunset">
             <div class="theme-preview" style="background: linear-gradient(145deg, #744210, #c05621);"></div>
             <span>Sunset</span>
+          </button>
+          <button id="theme-cyberpunk" class="theme-btn" data-theme="cyberpunk">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #0a0a0a, #2a0a3a, #1a0520);"></div>
+            <span>Cyberpunk</span>
+          </button>
+          <button id="theme-midnight-rose" class="theme-btn" data-theme="midnight-rose">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #1c1820, #3d3046);"></div>
+            <span>Midnight Rose</span>
+          </button>
+          <button id="theme-arctic-ice" class="theme-btn" data-theme="arctic-ice">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #f0f8ff, #d1e7ff);"></div>
+            <span>Arctic Ice</span>
+          </button>
+          <button id="theme-cherry-blossom" class="theme-btn" data-theme="cherry-blossom">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #fff5f8, #ffd4db);"></div>
+            <span>Cherry Blossom</span>
+          </button>
+          <button id="theme-cosmic-purple" class="theme-btn" data-theme="cosmic-purple">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #0f0524, #2d1b69, #4b0082);"></div>
+            <span>Cosmic Purple</span>
+          </button>
+          <button id="theme-emerald-dream" class="theme-btn" data-theme="emerald-dream">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #0d2818, #2d5a44);"></div>
+            <span>Emerald Dream</span>
+          </button>
+          <button id="theme-mocha-coffee" class="theme-btn" data-theme="mocha-coffee">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #3c2414, #5d3a26);"></div>
+            <span>Mocha Coffee</span>
+          </button>
+          <button id="theme-lavender-fields" class="theme-btn" data-theme="lavender-fields">
+            <div class="theme-preview" style="background: linear-gradient(145deg, #f8f4ff, #e6d8ff);"></div>
+            <span>Lavender Fields</span>
           </button>
         </div>
       </div>

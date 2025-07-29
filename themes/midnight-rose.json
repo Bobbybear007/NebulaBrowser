@@ -1,0 +1,17 @@
+{
+  "name": "Midnight Rose",
+  "colors": {
+    "bg": "#1c1820",
+    "darkBlue": "#2d2433",
+    "darkPurple": "#3d3046",
+    "primary": "#d4af37",
+    "accent": "#ffd700",
+    "text": "#f5f5dc"
+  },
+  "layout": "centered",
+  "showLogo": true,
+  "customTitle": "Nebula Browser",
+  "gradient": "linear-gradient(145deg, #1c1820 0%, #3d3046 100%)",
+  "version": "1.0",
+  "description": "An elegant dark theme with rose gold accents and warm undertones"
+}

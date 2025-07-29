@@ -1,0 +1,17 @@
+{
+  "name": "Emerald Dream",
+  "colors": {
+    "bg": "#0d2818",
+    "darkBlue": "#1a3a2e",
+    "darkPurple": "#2d5a44",
+    "primary": "#50c878",
+    "accent": "#98fb98",
+    "text": "#f0fff0"
+  },
+  "layout": "centered",
+  "showLogo": true,
+  "customTitle": "Nebula Browser",
+  "gradient": "linear-gradient(145deg, #0d2818 0%, #2d5a44 100%)",
+  "version": "1.0",
+  "description": "A sophisticated theme with rich emerald greens and jewel-like accents"
+}
