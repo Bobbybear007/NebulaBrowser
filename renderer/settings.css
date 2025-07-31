@@ -16,7 +16,7 @@
 }
 
 body {
-  background-color: var(--bg);
+  background: linear-gradient(145deg, var(--bg) 0%, var(--dark-purple) 100%);
   color: var(--text);
   font-family: 'InterVariable', sans-serif;
   margin: 0;
@@ -24,7 +24,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .container {

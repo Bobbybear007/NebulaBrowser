@@ -191,13 +191,16 @@ class BrowserCustomizer {
     };
 
     this.currentTheme = this.loadTheme();
+    this.activeThemeName = this.loadActiveThemeName();
     this.init();
   }
 
   init() {
     this.setupEventListeners();
     this.loadCurrentTheme();
+    this.restoreActiveThemeButton();
     this.updatePreview();
+    this.updateCustomThemeButton();
   }
 
   setupEventListeners() {
@@ -224,9 +227,20 @@ class BrowserCustomizer {
     document.querySelectorAll('input[name="layout"]').forEach(input => {
       input.addEventListener('change', (e) => {
         this.currentTheme.layout = e.target.value;
+        
+        // Clear active theme name since this is now a custom theme
+        this.activeThemeName = 'custom';
+        this.saveActiveThemeName('custom');
+        
+        // Remove active class from all theme buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        
         this.saveTheme();
         this.updatePreview();
         this.applyThemeToPages();
+        this.updateCustomThemeButton();
       });
     });
 
@@ -235,9 +249,20 @@ class BrowserCustomizer {
     if (showLogoInput) {
       showLogoInput.addEventListener('change', (e) => {
         this.currentTheme.showLogo = e.target.checked;
+        
+        // Clear active theme name since this is now a custom theme
+        this.activeThemeName = 'custom';
+        this.saveActiveThemeName('custom');
+        
+        // Remove active class from all theme buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        
         this.saveTheme();
         this.updatePreview();
         this.applyThemeToPages();
+        this.updateCustomThemeButton();
       });
     }
 
@@ -245,9 +270,20 @@ class BrowserCustomizer {
     if (customTitleInput) {
       customTitleInput.addEventListener('input', (e) => {
         this.currentTheme.customTitle = e.target.value || 'Nebula Browser';
+        
+        // Clear active theme name since this is now a custom theme
+        this.activeThemeName = 'custom';
+        this.saveActiveThemeName('custom');
+        
+        // Remove active class from all theme buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        
         this.saveTheme();
         this.updatePreview();
         this.applyThemeToPages();
+        this.updateCustomThemeButton();
       });
     }
 
@@ -301,21 +337,40 @@ class BrowserCustomizer {
         this.currentTheme.gradient = `linear-gradient(145deg, ${this.currentTheme.colors.bg} 0%, ${this.currentTheme.colors.darkPurple} 100%)`;
       }
 
+      // Clear active theme name since this is now a custom theme
+      this.activeThemeName = 'custom';
+      this.saveActiveThemeName('custom');
+      
+      // Remove active class from all theme buttons
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
       this.saveTheme();
       this.updatePreview();
       this.applyThemeToPages();
+      this.updateCustomThemeButton();
     }
   }
 
   applyPredefinedTheme(themeName) {
-    if (this.predefinedThemes[themeName]) {
+    if (themeName === 'custom') {
+      // For custom theme, just activate the button but don't change the current theme
+      this.activeThemeName = 'custom';
+      this.saveActiveThemeName('custom');
+      this.updateThemeButtons('custom');
+      this.updateCustomThemeButton();
+    } else if (this.predefinedThemes[themeName]) {
       this.currentTheme = { ...this.predefinedThemes[themeName] };
+      this.activeThemeName = themeName;
       this.saveTheme();
+      this.saveActiveThemeName(themeName);
       this.loadCurrentTheme();
       this.updatePreview();
       this.applyThemeToCurrentPage();
       this.applyThemeToPages();
       this.updateThemeButtons(themeName);
+      this.updateCustomThemeButton();
     }
   }
 
@@ -326,6 +381,37 @@ class BrowserCustomizer {
         btn.classList.add('active');
       }
     });
+  }
+
+  updateCustomThemeButton() {
+    const customBtn = document.getElementById('theme-custom');
+    if (!customBtn) return;
+
+    // Check if current theme matches any predefined theme
+    const matchingTheme = this.detectMatchingPredefinedTheme();
+    const isCustomTheme = !matchingTheme;
+    
+    if (isCustomTheme) {
+      customBtn.style.display = 'flex';
+      // Update the preview to show current colors
+      const preview = customBtn.querySelector('.theme-preview');
+      if (preview && this.currentTheme) {
+        preview.style.background = this.currentTheme.gradient || 
+          `linear-gradient(145deg, ${this.currentTheme.colors.bg}, ${this.currentTheme.colors.darkPurple})`;
+      }
+      // Set active theme name to custom if it's not already set to a predefined theme
+      if (this.activeThemeName !== 'custom') {
+        this.activeThemeName = 'custom';
+        this.saveActiveThemeName('custom');
+      }
+    } else {
+      customBtn.style.display = 'none';
+      // If we found a matching predefined theme, update activeThemeName if it was set to custom
+      if (this.activeThemeName === 'custom') {
+        this.activeThemeName = matchingTheme;
+        this.saveActiveThemeName(matchingTheme);
+      }
+    }
   }
 
   loadCurrentTheme() {
@@ -349,12 +435,25 @@ class BrowserCustomizer {
     const preview = document.getElementById('preview-container');
     const previewHome = preview.querySelector('.preview-home');
     const previewLogo = preview.querySelector('.preview-logo');
+    const previewText = preview.querySelector('.preview-text');
 
     // Apply colors to preview
     previewHome.style.background = this.currentTheme.gradient;
-    previewLogo.style.color = this.currentTheme.colors.primary;
-    previewLogo.textContent = this.currentTheme.showLogo ? 
-      `🌌 ${this.currentTheme.customTitle}` : this.currentTheme.customTitle;
+    
+    // Handle logo visibility
+    if (this.currentTheme.showLogo) {
+      previewLogo.style.display = 'block';
+      previewLogo.style.color = this.currentTheme.colors.primary;
+      previewLogo.textContent = '🌌';
+    } else {
+      previewLogo.style.display = 'none';
+    }
+    
+    // Always show preview text with custom title
+    if (previewText) {
+      previewText.style.color = this.currentTheme.colors.primary;
+      previewText.textContent = this.currentTheme.customTitle;
+    }
 
     // Update CSS custom properties for live preview
     this.applyThemeToCurrentPage();
@@ -473,7 +572,9 @@ class BrowserCustomizer {
   resetToDefault() {
     if (confirm('Are you sure you want to reset to the default theme? This will lose your current customizations.')) {
       this.currentTheme = { ...this.defaultTheme };
+      this.activeThemeName = 'default';
       this.saveTheme();
+      this.saveActiveThemeName('default');
       this.loadCurrentTheme();
       this.updatePreview();
       this.applyThemeToCurrentPage();
@@ -490,6 +591,64 @@ class BrowserCustomizer {
   loadTheme() {
     const savedTheme = localStorage.getItem('currentTheme');
     return savedTheme ? JSON.parse(savedTheme) : { ...this.defaultTheme };
+  }
+
+  saveActiveThemeName(themeName) {
+    localStorage.setItem('activeThemeName', themeName);
+  }
+
+  loadActiveThemeName() {
+    return localStorage.getItem('activeThemeName') || 'default';
+  }
+
+  restoreActiveThemeButton() {
+    // First, remove active class from all buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+
+    // If no active theme name is saved, try to detect which predefined theme matches current theme
+    if (!this.activeThemeName) {
+      this.activeThemeName = this.detectMatchingPredefinedTheme();
+      if (this.activeThemeName) {
+        this.saveActiveThemeName(this.activeThemeName);
+      } else {
+        // If no predefined theme matches, this is a custom theme
+        this.activeThemeName = 'custom';
+        this.saveActiveThemeName('custom');
+      }
+    }
+
+    // Update the custom theme button visibility
+    this.updateCustomThemeButton();
+
+    // Then, add active class to the currently active theme button
+    const activeBtn = document.querySelector(`[data-theme="${this.activeThemeName}"]`);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+    }
+  }
+
+  detectMatchingPredefinedTheme() {
+    // Check if current theme matches any predefined theme
+    for (const [themeName, themeData] of Object.entries(this.predefinedThemes)) {
+      if (this.themesMatch(this.currentTheme, themeData)) {
+        return themeName;
+      }
+    }
+    return null;
+  }
+
+  themesMatch(theme1, theme2) {
+    // Compare essential properties to determine if themes match
+    return theme1.colors.bg === theme2.colors.bg &&
+           theme1.colors.darkPurple === theme2.colors.darkPurple &&
+           theme1.colors.primary === theme2.colors.primary &&
+           theme1.colors.accent === theme2.colors.accent &&
+           theme1.colors.text === theme2.colors.text &&
+           theme1.layout === theme2.layout &&
+           theme1.showLogo === theme2.showLogo &&
+           theme1.customTitle === theme2.customTitle;
   }
 
   getCustomThemes() {
