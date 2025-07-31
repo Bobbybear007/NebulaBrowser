@@ -1,6 +1,11 @@
 [
+  "https://duckduckgo.com/?q=dogs&ia=web",
+  "https://duckduckgo.com/?q=dogs",
+  "https://www.bing.com/search?q=dogs",
+  "https://www.google.com/search?q=cats",
   "https://www.youtube.com/",
   "https://github.com/",
+  "file:///X:/Projects/Code/NebulaBrowser/renderer/index.html",
   "file:///X:/Projects/Code/NebulaBrowser/renderer/index.html",
   "https://youtube.com/",
   "file:///X:/Projects/Code/NebulaBrowser/renderer/index.html",

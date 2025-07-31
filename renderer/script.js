@@ -90,34 +90,41 @@ function createTab(inputUrl) {
   console.log('[DEBUG] createTab() inputUrl =', inputUrl);
   const id = crypto.randomUUID();
   
-        // Handle home page specially
-        if (inputUrl === 'browser://home') {
-            // Show home container and hide webviews
-            const homeContainer = document.getElementById('home-container');
-            const webviewsEl = document.getElementById('webviews');
-            if (homeContainer) homeContainer.classList.add('active');
-            if (webviewsEl) webviewsEl.classList.add('hidden');
-            const tab = {
-                id,
-                url: inputUrl,
-                title: 'New Tab',
-                favicon: '',
-                history: [inputUrl],
-                historyIndex: 0,
-                isHome: true
-            };
-            tabs.push(tab);
-            setActiveTab(id);
-            // Render the tab bar so the new home tab appears
-            renderTabs();
-            return id;
-        }
+  // Handle home page specially
+  if (inputUrl === 'browser://home') {
+    // Show home container and hide webviews
+    const homeContainer = document.getElementById('home-container');
+    const webviewsEl = document.getElementById('webviews');
+    if (homeContainer) homeContainer.classList.add('active');
+    if (webviewsEl) webviewsEl.classList.add('hidden');
+    const tab = {
+        id,
+        url: inputUrl,
+        title: 'New Tab',
+        favicon: '',
+        history: [inputUrl],
+        historyIndex: 0,
+        isHome: true
+    };
+    tabs.push(tab);
+    setActiveTab(id);
+    // Render the tab bar so the new home tab appears
+    renderTabs();
+    return id;
+  }
   
   // For all other URLs, use webview
   const resolvedUrl = resolveInternalUrl(inputUrl);
   console.log('[DEBUG] createTab() resolvedUrl =', resolvedUrl);
 
   const webview = document.createElement('webview');
+  // give the webview an id and set its source and attributes so it actually loads and can be managed
+  webview.id = `tab-${id}`;
+  webview.src = resolvedUrl;
+  webview.setAttribute('allowpopups', '');
+  webview.setAttribute('partition', 'persist:default');
+  webview.setAttribute('preload', '../preload.js');
+
   webview.addEventListener('page-favicon-updated', e => {
     if (e.favicons.length > 0) updateTabMetadata(id, 'favicon', e.favicons[0]);
   });
