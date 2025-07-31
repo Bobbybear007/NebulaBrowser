@@ -1,4 +1,5 @@
 // Use require('electron') since webviews have nodeIntegrationInSubFrames: true
+// In settings webview we use the same preload API as main windows
 const { ipcRenderer } = require('electron');
 
 const clearBtn = document.getElementById('clear-data-btn');
@@ -14,11 +15,10 @@ function showStatus(message) {
 }
 
 clearBtn.onclick = async () => {
-  statusDiv.classList.remove('hidden'); // Show spinner immediately
-  statusText.textContent = 'Clearing all browser data...'; // Update text while clearing
+  statusDiv.classList.remove('hidden');
+  statusText.textContent = 'Clearing all browser data...';
 
   try {
-    // Invoke the main process to clear cookies, local storage, and cache
     const ok = await ipcRenderer.invoke('clear-browser-data');
     showStatus(ok
       ? 'All browser data and bookmarks cleared!'
@@ -26,5 +26,11 @@ clearBtn.onclick = async () => {
   } catch (error) {
     console.error('Error clearing browser data:', error);
     showStatus('An error occurred while clearing data.');
+  } finally {
+    // Send theme update to host after clearing
+    const currentTheme = window.browserCustomizer ? window.browserCustomizer.currentTheme : null;
+    if (currentTheme && window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+      window.electronAPI.sendToHost('theme-update', currentTheme);
+    }
   }
 };

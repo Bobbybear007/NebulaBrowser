@@ -478,10 +478,13 @@ class BrowserCustomizer {
 
   applyThemeToPages() {
     // This will be called to apply theme to home.html and other pages
-    // We'll store the theme and let other pages load it
     this.saveTheme();
-    
-    // If we have access to other windows/frames, apply there too
+
+    // Send theme update to host (for settings webview)
+    if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+      window.electronAPI.sendToHost('theme-update', this.currentTheme);
+    }
+    // Fallback: send via postMessage (for iframe embedding)
     try {
       if (window.parent && window.parent !== window) {
         window.parent.postMessage({

@@ -87,10 +87,15 @@ function renderBookmarks() {
 
     // Navigate via IPC to host page
     box.onclick = () => {
+      const url = b.url;
       if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
-        window.electronAPI.sendToHost('navigate', b.url);
+        window.electronAPI.sendToHost('navigate', url);
       } else {
         console.error('Unable to send navigation IPC to host');
+      }
+      // Fallback: post message to embedding page
+      if (window.parent && typeof window.parent.postMessage === 'function') {
+        window.parent.postMessage({ type: 'navigate', url }, '*');
       }
     };
 
@@ -205,7 +210,16 @@ searchBtn.addEventListener('click', () => {
     const searchEngineUrl = searchEngines[selectedSearchEngine];
     target = `${searchEngineUrl}${encodeURIComponent(input)}`;
   }
-  window.location.href = target;
+  // Always send navigation request to host
+  if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+    window.electronAPI.sendToHost('navigate', target);
+    return;
+  }
+  // Fallback: post message to embedding page
+  if (window.parent && typeof window.parent.postMessage === 'function') {
+    window.parent.postMessage({ type: 'navigate', url: target }, '*');
+    return;
+  }
 });
 
 searchInput.addEventListener('keydown', e => {

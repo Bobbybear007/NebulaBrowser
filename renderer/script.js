@@ -75,7 +75,7 @@ async function saveBookmarks(newBookmarks) {
 
 // Load bookmarks when the script starts
 loadBookmarks();
-// Home tab will be created on DOMContentLoaded event
+// Initial home tab will be created on DOMContentLoaded
 
 // Remove iframe-based navigation listener (using webview IPC now)
 
@@ -108,6 +108,8 @@ function createTab(inputUrl) {
             };
             tabs.push(tab);
             setActiveTab(id);
+            // Render the tab bar so the new home tab appears
+            renderTabs();
             return id;
         }
   
@@ -116,16 +118,6 @@ function createTab(inputUrl) {
   console.log('[DEBUG] createTab() resolvedUrl =', resolvedUrl);
 
   const webview = document.createElement('webview');
-
-  webview.id = `tab-${id}`;
-  webview.src = resolvedUrl;
-  webview.setAttribute('allowpopups', '');
-  webview.setAttribute('partition', 'persist:default');
-  webview.setAttribute('preload', '../preload.js');
-  webview.classList.add('active');
-
-  webview.addEventListener('did-fail-load', handleLoadFail(id));
-  webview.addEventListener('page-title-updated', e => updateTabMetadata(id, 'title', e.title));
   webview.addEventListener('page-favicon-updated', e => {
     if (e.favicons.length > 0) updateTabMetadata(id, 'favicon', e.favicons[0]);
   });
@@ -184,6 +176,14 @@ function createTab(inputUrl) {
   webview.addEventListener('new-window', e => {
     e.preventDefault();
     createTab(e.url);
+  });
+
+  // After creating dynamic webview:
+  webview.addEventListener('ipc-message', e => {
+    if (e.channel === 'theme-update') {
+      const home = document.getElementById('home-webview');
+      if (home) home.send('theme-update', ...e.args);
+    }
   });
 
   webviewsEl.appendChild(webview);
@@ -322,6 +322,14 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
 
   webview.addEventListener('new-window', e => {
     createTab(e.url);
+  });
+
+  // After creating dynamic webview:
+  webview.addEventListener('ipc-message', e => {
+    if (e.channel === 'theme-update') {
+      const home = document.getElementById('home-webview');
+      if (home) home.send('theme-update', ...e.args);
+    }
   });
 
   // Add webview to DOM
@@ -486,7 +494,9 @@ function renderTabs() {
   });
   // add the “+” at the end
   const plus = document.createElement('div');
-  plus.className = 'tab'; plus.textContent = '+'; plus.onclick = () => createTab();
+  plus.className = 'tab';
+  plus.textContent = '+';
+  plus.onclick = () => createTab();
   frag.appendChild(plus);
 
   tabBarEl.innerHTML = '';           // clear once
@@ -533,10 +543,9 @@ function reload() {
   }
 }
 
-
+// Function to open the Settings page
 function openSettings() {
-  urlBox.value = 'browser://settings';
-  navigate();
+  createTab('browser://settings');
 }
 
 // Toggle menu dropdown
@@ -562,16 +571,38 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   createTab();
-  // Listen for navigation IPC messages from home webview
-  const homeWebview = document.getElementById('home-webview');
-  if (homeWebview) {
-    homeWebview.addEventListener('ipc-message', e => {
+  // Handle IPC messages from the static home webview (bookmarks navigation)
+  const staticHome = document.getElementById('home-webview');
+  if (staticHome) {
+    staticHome.addEventListener('ipc-message', (e) => {
       if (e.channel === 'navigate' && e.args[0]) {
         urlBox.value = e.args[0];
         navigate();
       }
     });
   }
+  // Listen for IPC messages from other webviews (e.g., settings)
+  webviewsEl.addEventListener('ipc-message', (e) => {
+    // Navigation messages from home or other pages
+    if (e.channel === 'navigate' && e.args[0]) {
+      urlBox.value = e.args[0];
+      navigate();
+    }
+    // Theme update from settings webview
+    if (e.channel === 'theme-update' && e.args[0]) {
+      const homeWebview = document.getElementById('home-webview');
+      if (homeWebview) {
+        homeWebview.send('theme-update', e.args[0]);
+      }
+    }
+  });
+  // Fallback: listen for postMessage navigations from home webview
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'navigate' && event.data.url) {
+      urlBox.value = event.data.url;
+      navigate();
+    }
+  });
   // only now bind the reload button (guaranteed to exist)
   const reloadBtn = document.getElementById('reload-btn');
   reloadBtn.addEventListener('click', reload);
