@@ -75,9 +75,7 @@ async function saveBookmarks(newBookmarks) {
 
 // Load bookmarks when the script starts
 loadBookmarks();
-
-// Create initial home tab on startup
-createTab();
+// Home tab will be created on DOMContentLoaded event
 
 // Remove iframe-based navigation listener (using webview IPC now)
 
