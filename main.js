@@ -375,6 +375,53 @@ ipcMain.on('homepage-changed', (event, url) => {
   console.log('[MAIN] homepage-changed →', url);
 });
 
+// Bookmark management
+ipcMain.handle('load-bookmarks', async () => {
+  try {
+    const bookmarksPath = path.join(__dirname, 'bookmarks.json');
+    if (fs.existsSync(bookmarksPath)) {
+      const data = fs.readFileSync(bookmarksPath, 'utf8');
+      const bookmarks = JSON.parse(data);
+      console.log(`Loaded ${bookmarks.length} bookmarks from file`);
+      return bookmarks;
+    }
+    console.log('No bookmarks file found, starting with empty array');
+    return [];
+  } catch (error) {
+    console.error('Error loading bookmarks:', error);
+    // Try to create a backup if the file is corrupted
+    const bookmarksPath = path.join(__dirname, 'bookmarks.json');
+    const backupPath = path.join(__dirname, `bookmarks.backup.${Date.now()}.json`);
+    try {
+      if (fs.existsSync(bookmarksPath)) {
+        fs.copyFileSync(bookmarksPath, backupPath);
+        console.log(`Corrupted bookmarks file backed up to: ${backupPath}`);
+      }
+    } catch (backupError) {
+      console.error('Failed to create backup:', backupError);
+    }
+    return [];
+  }
+});
+
+ipcMain.handle('save-bookmarks', async (event, bookmarks) => {
+  try {
+    const bookmarksPath = path.join(__dirname, 'bookmarks.json');
+    
+    // Create a backup before saving
+    if (fs.existsSync(bookmarksPath)) {
+      const backupPath = path.join(__dirname, 'bookmarks.backup.json');
+      fs.copyFileSync(bookmarksPath, backupPath);
+    }
+    
+    fs.writeFileSync(bookmarksPath, JSON.stringify(bookmarks, null, 2));
+    console.log(`Saved ${bookmarks.length} bookmarks to file`);
+    return true;
+  } catch (error) {
+    console.error('Error saving bookmarks:', error);
+    return false;
+  }
+});
 
 ipcMain.handle('clear-browser-data', async () => {
   try {

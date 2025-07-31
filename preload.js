@@ -17,6 +17,14 @@ const electronAPI = {
       console.error('IPC send error:', err);
     }
   },
+  // Send message to embedding page (webview host)
+  sendToHost: (ch, ...args) => {
+    try {
+      return ipcRenderer.sendToHost(ch, ...args);
+    } catch (err) {
+      console.error('IPC sendToHost error:', err);
+    }
+  },
   invoke: (ch, ...args) => {
     try {
       return ipcRenderer.invoke(ch, ...args);

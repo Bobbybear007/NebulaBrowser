@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "title": "Google",
+    "url": "https://www.google.com",
+    "icon": "search"
+  },
+  {
+    "title": "GitHub",
+    "url": "https://github.com",
+    "icon": "code"
+  },
+  {
+    "title": "YouTube",
+    "url": "https://www.youtube.com",
+    "icon": "play_arrow"
+  }
+]

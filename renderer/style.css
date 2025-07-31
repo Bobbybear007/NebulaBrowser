@@ -130,14 +130,44 @@ html, body {
   width: 100%;
   position: relative;
 }
+#webviews.hidden {
+  display: none;
+}
 
 #webviews webview {
   flex: 1;
-  display: none;
   border: none;
+  display: none;
+}
+#webviews webview.active {
+  display: flex;
+}
+/* When webviews is hidden, collapse its flex size */
+#webviews.hidden {
+  flex: 0;
 }
 
-#webviews webview.active {
+/* HOME CONTAINER */
+#home-container {
+  flex: 1;
+  display: none;
+  width: 100%;
+  position: relative;
+}
+
+#home-container.active {
+  display: flex;
+}
+
+#home-webview {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: none;
+  flex: 1;
+}
+/* Show home webview when container is active */
+#home-container.active > #home-webview {
   display: flex;
 }
 

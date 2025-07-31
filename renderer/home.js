@@ -1,7 +1,5 @@
 import { icons as initialIcons, fetchAllIcons } from './icons.js';
 
-const BOOKMARKS_KEY = 'steamos_browser_bookmarks';
-
 const bookmarkList      = document.getElementById('bookmarkList');
 const titleInput        = document.getElementById('titleInput');
 const urlInput          = document.getElementById('urlInput');
@@ -26,18 +24,44 @@ const searchEngines = {
 };
 let selectedSearchEngine = 'google';
 
-let bookmarks = JSON.parse(localStorage.getItem(BOOKMARKS_KEY)) || [];
+let bookmarks = [];
 
-function saveBookmarks() {
-  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+// Load bookmarks from main via Electron IPC
+// Load bookmarks via contextBridge API
+async function loadBookmarks() {
+  try {
+    let data = [];
+    // Use bookmarksAPI if available
+    if (window.bookmarksAPI && typeof window.bookmarksAPI.load === 'function') {
+      data = await window.bookmarksAPI.load();
+    } else if (window.electronAPI && typeof window.electronAPI.invoke === 'function') {
+      data = await window.electronAPI.invoke('load-bookmarks');
+    } else {
+      console.error('No API available to load bookmarks');
+    }
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error loading bookmarks:', error);
+    return [];
+  }
 }
 
+// Save bookmarks to main process
+// Save bookmarks via contextBridge API
+async function saveBookmarks() {
+  try {
+    await window.bookmarksAPI.save(bookmarks);
+  } catch (error) {
+    console.error('Error saving bookmarks:', error);
+  }
+}
+
+// Render bookmarks
 function renderBookmarks() {
-  const list = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || '[]');
   bookmarkList.innerHTML = '';
 
   // Render each bookmark
-  list.forEach((b, index) => {
+  bookmarks.forEach((b, index) => {
     const box = document.createElement('div');
     box.className = 'bookmark';
 
@@ -54,14 +78,21 @@ function renderBookmarks() {
     const close = document.createElement('button');
     close.textContent = '×';
     close.className = 'delete-btn';
-    close.onclick = (e) => {
+    close.onclick = async (e) => {
       e.stopPropagation();
       bookmarks.splice(index, 1);
-      saveBookmarks();
+      await saveBookmarks();
       renderBookmarks();
     };
 
-    box.onclick = () => window.location.href = b.url;
+    // Navigate via IPC to host page
+    box.onclick = () => {
+      if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+        window.electronAPI.sendToHost('navigate', b.url);
+      } else {
+        console.error('Unable to send navigation IPC to host');
+      }
+    };
 
     box.appendChild(label);
     box.appendChild(close);
@@ -121,14 +152,14 @@ renderIconGrid();
   }
 })();
 
-saveBookmarkBtn.onclick = () => {
+saveBookmarkBtn.onclick = async () => {
   const title = titleInput.value.trim();
   const url   = urlInput.value.trim();
   const icon  = selectedIcon;
   if (!title || !url) return;
 
   bookmarks.push({ title, url, icon });
-  saveBookmarks();
+  await saveBookmarks();
   renderBookmarks();
 
   titleInput.value = '';
@@ -181,5 +212,8 @@ searchInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') searchBtn.click();
 });
 
-// initial render from localStorage
-renderBookmarks();
+// Load and render bookmarks immediately
+(async () => {
+  bookmarks = await loadBookmarks();
+  renderBookmarks();
+})();

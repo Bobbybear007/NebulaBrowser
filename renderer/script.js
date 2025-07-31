@@ -53,6 +53,34 @@ let activeTabId = null;
 const allowedInternalPages = ['settings', 'home'];
 let bookmarks = [];
 
+// Load bookmarks on startup
+async function loadBookmarks() {
+  try {
+    bookmarks = await ipcRenderer.invoke('load-bookmarks');
+  } catch (error) {
+    console.error('Error loading bookmarks in main context:', error);
+    bookmarks = [];
+  }
+}
+
+// Function to save bookmarks
+async function saveBookmarks(newBookmarks) {
+  try {
+    bookmarks = newBookmarks;
+    await ipcRenderer.invoke('save-bookmarks', bookmarks);
+  } catch (error) {
+    console.error('Error saving bookmarks in main context:', error);
+  }
+}
+
+// Load bookmarks when the script starts
+loadBookmarks();
+
+// Create initial home tab on startup
+createTab();
+
+// Remove iframe-based navigation listener (using webview IPC now)
+
 // Listen for site history updates from main process
 ipcRenderer.on('record-site-history', (event, url) => {
   console.log('[DEBUG] Received site history update:', url);
@@ -63,6 +91,29 @@ function createTab(inputUrl) {
   inputUrl = inputUrl || 'browser://home';
   console.log('[DEBUG] createTab() inputUrl =', inputUrl);
   const id = crypto.randomUUID();
+  
+        // Handle home page specially
+        if (inputUrl === 'browser://home') {
+            // Show home container and hide webviews
+            const homeContainer = document.getElementById('home-container');
+            const webviewsEl = document.getElementById('webviews');
+            if (homeContainer) homeContainer.classList.add('active');
+            if (webviewsEl) webviewsEl.classList.add('hidden');
+            const tab = {
+                id,
+                url: inputUrl,
+                title: 'New Tab',
+                favicon: '',
+                history: [inputUrl],
+                historyIndex: 0,
+                isHome: true
+            };
+            tabs.push(tab);
+            setActiveTab(id);
+            return id;
+        }
+  
+  // For all other URLs, use webview
   const resolvedUrl = resolveInternalUrl(inputUrl);
   console.log('[DEBUG] createTab() resolvedUrl =', resolvedUrl);
 
@@ -72,12 +123,27 @@ function createTab(inputUrl) {
   webview.src = resolvedUrl;
   webview.setAttribute('allowpopups', '');
   webview.setAttribute('partition', 'persist:default');
+  webview.setAttribute('preload', '../preload.js');
   webview.classList.add('active');
 
   webview.addEventListener('did-fail-load', handleLoadFail(id));
   webview.addEventListener('page-title-updated', e => updateTabMetadata(id, 'title', e.title));
   webview.addEventListener('page-favicon-updated', e => {
     if (e.favicons.length > 0) updateTabMetadata(id, 'favicon', e.favicons[0]);
+  });
+
+  // Send bookmarks to home page when it loads
+  webview.addEventListener('dom-ready', () => {
+    if (inputUrl === 'browser://home') {
+      webview.executeJavaScript(`
+        if (window.receiveBookmarks) {
+          window.receiveBookmarks(${JSON.stringify(bookmarks)});
+        } else {
+          // Store bookmarks for when the page script loads
+          window._pendingBookmarks = ${JSON.stringify(bookmarks)};
+        }
+      `);
+    }
   });
 
   // Consolidated navigation recording - only use did-navigate to avoid duplicates
@@ -169,8 +235,7 @@ function updateTabMetadata(id, key, value) {
 function navigate() {
   const input = urlBox.value.trim();
   const tab = tabs.find(t => t.id === activeTabId);
-  const webview = document.getElementById(`tab-${activeTabId}`);
-  if (!tab || !webview) return;
+  if (!tab) return;
 
   // decide if this is a search query or a URL/internal page
   const hasProtocol = /^https?:\/\//i.test(input);
@@ -183,6 +248,18 @@ function navigate() {
     resolved = resolveInternalUrl(input);
   }
 
+  // If current tab is a home tab and we're navigating to a website, 
+  // we need to convert it to a webview tab or create a new one
+  if (tab.isHome && !input.startsWith('browser://')) {
+    // Convert home tab to webview tab
+    convertHomeTabToWebview(tab.id, input, resolved);
+    return;
+  }
+
+  // For regular webview tabs, just navigate
+  const webview = document.getElementById(`tab-${activeTabId}`);
+  if (!webview) return;
+
   // Push to history using the original input
   tab.history = tab.history.slice(0, tab.historyIndex + 1);
   tab.history.push(input);
@@ -192,6 +269,75 @@ function navigate() {
   webview.src = resolved;
 
   renderTabs();
+  updateNavButtons();
+}
+
+function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
+  const tab = tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  // Create a new webview for this tab
+  const webview = document.createElement('webview');
+  webview.id = `tab-${tabId}`;
+  webview.src = resolvedUrl;
+  webview.setAttribute('allowpopups', '');
+  webview.setAttribute('partition', 'persist:default');
+  webview.setAttribute('preload', '../preload.js');
+
+  // Add event listeners
+  webview.addEventListener('did-fail-load', handleLoadFail(tabId));
+  webview.addEventListener('page-title-updated', e => updateTabMetadata(tabId, 'title', e.title));
+  webview.addEventListener('page-favicon-updated', e => {
+    if (e.favicons.length > 0) updateTabMetadata(tabId, 'favicon', e.favicons[0]);
+  });
+
+  webview.addEventListener('did-navigate', e => {
+    handleNavigation(tabId, e.url);
+    if (e.url.startsWith('http')) {
+      addToSiteHistory(e.url);
+      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
+        console.error('Failed to save to file:', err)
+      );
+    }
+  });
+  
+  webview.addEventListener('did-navigate-in-page', e => {
+    handleNavigation(tabId, e.url);
+    if (e.url.startsWith('http')) {
+      addToSiteHistory(e.url);
+      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
+        console.error('Failed to save to file:', err)
+      );
+    }
+  });
+
+  webview.addEventListener('did-finish-load', () => {
+    const currentUrl = webview.getURL();
+    if (currentUrl.startsWith('http') && !currentUrl.includes('browser://')) {
+      addToSiteHistory(currentUrl);
+      ipcRenderer.invoke('save-site-history-entry', currentUrl);
+    }
+  });
+
+  webview.addEventListener('new-window', e => {
+    createTab(e.url);
+  });
+
+  // Add webview to DOM
+  webviewsEl.appendChild(webview);
+
+  // Update tab properties
+  tab.isHome = false;
+  tab.webview = webview;
+  tab.url = inputUrl;
+  tab.history = [inputUrl];
+  tab.historyIndex = 0;
+
+  // Hide home container and show webview
+  const homeContainer = document.getElementById('home-container');
+  if (homeContainer) homeContainer.classList.remove('active');
+  webview.classList.add('active');
+
   updateNavButtons();
 }
 
@@ -241,17 +387,30 @@ function handleNavigation(tabId, newUrl) {
 
 
 function setActiveTab(id) {
+  // hide all individual webviews
   tabs.forEach(t => {
     const w = document.getElementById(`tab-${t.id}`);
     if (w) w.classList.remove('active');
   });
+  // toggle containers
+  const homeContainer = document.getElementById('home-container');
+  const webviewsEl = document.getElementById('webviews');
 
-  const activeWebview = document.getElementById(`tab-${id}`);
-  if (activeWebview) activeWebview.classList.add('active');
+  const tab = tabs.find(t => t.id === id);
+  if (tab) {
+    if (tab.isHome) {
+      homeContainer.classList.add('active');
+      webviewsEl.classList.add('hidden');
+    } else {
+      if (homeContainer) homeContainer.classList.remove('active');
+      webviewsEl.classList.remove('hidden');
+      const activeWebview = document.getElementById(`tab-${id}`);
+      if (activeWebview) activeWebview.classList.add('active');
+    }
+  }
 
   activeTabId = id;
 
-  const tab = tabs.find(t => t.id === id);
   if (tab) {
     // If the tab URL represents the home page, keep the URL bar blank.
     urlBox.value = tab.url === 'browser://home' ? '' : tab.url;
@@ -399,6 +558,16 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   createTab();
+  // Listen for navigation IPC messages from home webview
+  const homeWebview = document.getElementById('home-webview');
+  if (homeWebview) {
+    homeWebview.addEventListener('ipc-message', e => {
+      if (e.channel === 'navigate' && e.args[0]) {
+        urlBox.value = e.args[0];
+        navigate();
+      }
+    });
+  }
   // only now bind the reload button (guaranteed to exist)
   const reloadBtn = document.getElementById('reload-btn');
   reloadBtn.addEventListener('click', reload);
@@ -435,7 +604,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // menu‐related code (moved here so #context-menu exists)
-  const items = menu ? menu.querySelectorAll('li') : [];
+  const items = contextMenu ? contextMenu.querySelectorAll('li') : [];
 
   function showContextMenu(x, y) {
     if (!menu) return;
@@ -531,8 +700,14 @@ function updateZoomUI() {
 function zoomIn()  { ipcRenderer.invoke('zoom-in').then(updateZoomUI); }
 function zoomOut() { ipcRenderer.invoke('zoom-out').then(updateZoomUI); }
 
-const fs = require('fs');
-const { remote } = require('electron');
+// Attempt to load Node modules if available for context-menu actions
+let fs, remote;
+try {
+  fs = require('fs');
+  remote = require('electron').remote;
+} catch (err) {
+  console.warn('fs or remote modules unavailable in renderer:', err);
+}
 
 // 4) unify context-menu wiring
 function showContextMenu(x,y) {
