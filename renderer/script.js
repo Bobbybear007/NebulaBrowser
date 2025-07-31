@@ -276,6 +276,9 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
 
+  // Ensure webviews container is visible
+  const webviewsEl = document.getElementById('webviews');
+  if (webviewsEl) webviewsEl.classList.remove('hidden');
   // Create a new webview for this tab
   const webview = document.createElement('webview');
   webview.id = `tab-${tabId}`;
@@ -339,6 +342,9 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   webview.classList.add('active');
 
   updateNavButtons();
+  // Activate converted webview tab and update UI
+  setActiveTab(tabId);
+  renderTabs();
 }
 
 function handleNavigation(tabId, newUrl) {
