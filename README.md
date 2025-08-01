@@ -98,3 +98,4 @@ This project is licensed under the MIT License. [Read More](documentation/MIT.md
 * [Project Structure](documentation/PROJECT_STRUCTURE.md)
 * [Core Concepts](documentation/CORE_CONCEPTS.md)
 * [Contributing Guide](documentation/CONTRIBUTING.md)
+* [OAuth Debug](documentation/oauth-debug.md)
