@@ -122,8 +122,11 @@ function createTab(inputUrl) {
   webview.id = `tab-${id}`;
   webview.src = resolvedUrl;
   webview.setAttribute('allowpopups', '');
-  webview.setAttribute('partition', 'persist:default');
+  webview.setAttribute('partition', 'persist:main');
   webview.setAttribute('preload', '../preload.js');
+  // Add attributes needed for Google OAuth and sign-in flows
+  webview.setAttribute('webpreferences', 'allowRunningInsecureContent=false,javascript=true,webSecurity=true');
+  webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
 
   webview.addEventListener('page-favicon-updated', e => {
     if (e.favicons.length > 0) updateTabMetadata(id, 'favicon', e.favicons[0]);
@@ -289,8 +292,11 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   webview.id = `tab-${tabId}`;
   webview.src = resolvedUrl;
   webview.setAttribute('allowpopups', '');
-  webview.setAttribute('partition', 'persist:default');
+  webview.setAttribute('partition', 'persist:main');
   webview.setAttribute('preload', '../preload.js');
+  // Add attributes needed for Google OAuth and sign-in flows
+  webview.setAttribute('webpreferences', 'allowRunningInsecureContent=false,javascript=true,webSecurity=true');
+  webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
 
   // Add event listeners
   webview.addEventListener('did-fail-load', handleLoadFail(tabId));

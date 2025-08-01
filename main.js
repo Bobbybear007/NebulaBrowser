@@ -49,7 +49,10 @@ function createWindow(startUrl) {
       experimentalFeatures: false,
       offscreen: false, // Ensure on-screen rendering for GPU
       enableWebSQL: false, // Disable deprecated features
-      plugins: false // Disable plugins that might interfere with GPU
+      plugins: false, // Disable plugins that might interfere with GPU
+      // OAuth compatibility settings
+      partition: 'persist:main',
+      sandbox: false // Allow full browser capabilities for OAuth
     },
     fullscreen: false,
     autoHideMenuBar: true,
@@ -267,18 +270,46 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Optimize session settings for performance
+  // Optimize session settings for performance and OAuth compatibility
   const ses = session.defaultSession;
   
   try {
+    // Configure session for OAuth compatibility (Google, etc.)
+    ses.setPermissionRequestHandler((webContents, permission, callback) => {
+      // Allow necessary permissions for OAuth flows
+      if (['notifications', 'geolocation', 'camera', 'microphone'].includes(permission)) {
+        callback(false); // Deny by default for privacy
+      } else {
+        callback(true); // Allow others like storage access
+      }
+    });
+
+    // Configure user agent for better compatibility
+    ses.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
+    
+    // Configure cookies for OAuth compatibility
+    ses.cookies.on('changed', (event, cookie, cause, removed) => {
+      // Log cookie changes for debugging OAuth issues
+      if (cookie.domain.includes('google') || cookie.domain.includes('accounts')) {
+        console.log(`Cookie ${removed ? 'removed' : 'added'}: ${cookie.name} for ${cookie.domain}`);
+      }
+    });
+    
     // Enable request/response caching
     ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      // Add headers for better OAuth compatibility
       details.requestHeaders['Cache-Control'] = 'max-age=3600';
+      // Ensure we accept third-party cookies for OAuth flows
+      details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+      // Add referrer policy for OAuth compatibility
+      if (details.url.includes('accounts.google.com') || details.url.includes('oauth')) {
+        details.requestHeaders['Referrer-Policy'] = 'strict-origin-when-cross-origin';
+      }
       callback({ requestHeaders: details.requestHeaders });
     });
     
     // Skip preload registration as it's handled in window options
-    console.log('Session configured successfully');
+    console.log('Session configured successfully for OAuth compatibility');
   } catch (err) {
     console.error('Session setup error:', err);
   }
