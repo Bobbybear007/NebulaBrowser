@@ -1,4 +1,7 @@
 const ipcRenderer = window.electronAPI;
+// Lightweight debug logger (toggleable)
+const DEBUG = false;
+const debug = (...args) => { if (DEBUG) console.log(...args); };
 
 // Site history management using localStorage
 function getSiteHistory() {
@@ -35,6 +38,7 @@ const webviewsEl   = document.getElementById('webviews');
 const menuPopup    = document.getElementById('menu-popup');
 const contextMenu  = document.getElementById('context-menu');
 const menuItems    = contextMenu ? contextMenu.querySelectorAll('li') : [];
+let lastContextPos = { x: 0, y: 0 };
 
 // Select all text on focus and prevent mouseup from deselecting
 urlBox.addEventListener('focus', () => {
@@ -61,6 +65,19 @@ function scheduleRenderTabs() {
   requestAnimationFrame(() => {
     tabsRenderPending = false;
     renderTabs();
+  });
+}
+
+// Debounce nav button updates to reduce layout work
+let navButtonsPending = false;
+let backBtnCached = null;
+let fwdBtnCached = null;
+function scheduleUpdateNavButtons() {
+  if (navButtonsPending) return;
+  navButtonsPending = true;
+  requestAnimationFrame(() => {
+    navButtonsPending = false;
+    try { updateNavButtons(); } catch {}
   });
 }
 
@@ -105,13 +122,13 @@ loadBookmarks();
 
 // Listen for site history updates from main process
 ipcRenderer.on('record-site-history', (event, url) => {
-  console.log('[DEBUG] Received site history update:', url);
+  debug('[DEBUG] Received site history update:', url);
   addToSiteHistory(url);
 });
 
 function createTab(inputUrl) {
   inputUrl = inputUrl || 'browser://home';
-  console.log('[DEBUG] createTab() inputUrl =', inputUrl);
+  debug('[DEBUG] createTab() inputUrl =', inputUrl);
   const id = crypto.randomUUID();
   
   // Handle home page specially
@@ -139,7 +156,7 @@ function createTab(inputUrl) {
   
   // For all other URLs, use webview
   const resolvedUrl = resolveInternalUrl(inputUrl);
-  console.log('[DEBUG] createTab() resolvedUrl =', resolvedUrl);
+  debug('[DEBUG] createTab() resolvedUrl =', resolvedUrl);
 
   const webview = document.createElement('webview');
   // give the webview an id and set its source and attributes so it actually loads and can be managed
@@ -173,37 +190,17 @@ function createTab(inputUrl) {
   // Consolidated navigation recording - only use did-navigate to avoid duplicates
   webview.addEventListener('did-navigate', e => {
     handleNavigation(id, e.url);
-    // Record ALL HTTP navigations
-    if (e.url.startsWith('http')) {
-      console.log('[DEBUG] Recording navigation to:', e.url);
-      addToSiteHistory(e.url);
-      // Also save to file for cross-context sharing
-      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
-        console.error('Failed to save to file:', err)
-      );
-    }
+    if (e.url.startsWith('http')) debug('[DEBUG] Recording navigation to:', e.url);
   });
   
   webview.addEventListener('did-navigate-in-page', e => {
     handleNavigation(id, e.url);
-    // Record in-page navigations too
-    if (e.url.startsWith('http')) {
-      console.log('[DEBUG] Recording in-page navigation to:', e.url);
-      addToSiteHistory(e.url);
-      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
-        console.error('Failed to save to file:', err)
-      );
-    }
+    if (e.url.startsWith('http')) debug('[DEBUG] Recording in-page navigation to:', e.url);
   });
 
-  // Also capture when pages finish loading
+  // After load, just refresh nav buttons to avoid jank
   webview.addEventListener('did-finish-load', () => {
-    const currentUrl = webview.getURL();
-    if (currentUrl.startsWith('http') && !currentUrl.includes('browser://')) {
-      console.log('[DEBUG] Webview did-finish-load, recording:', currentUrl);
-      addToSiteHistory(currentUrl);
-      ipcRenderer.invoke('save-site-history-entry', currentUrl);
-    }
+    scheduleUpdateNavButtons();
   });
 
   // catch any target="_blank" or window.open() calls and open them as new tabs
@@ -310,7 +307,7 @@ function navigate() {
   webview.src = resolved;
 
   scheduleRenderTabs();
-  updateNavButtons();
+  scheduleUpdateNavButtons();
 }
 
 function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
@@ -340,30 +337,12 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
 
   webview.addEventListener('did-navigate', e => {
     handleNavigation(tabId, e.url);
-    if (e.url.startsWith('http')) {
-      addToSiteHistory(e.url);
-      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
-        console.error('Failed to save to file:', err)
-      );
-    }
   });
-  
   webview.addEventListener('did-navigate-in-page', e => {
     handleNavigation(tabId, e.url);
-    if (e.url.startsWith('http')) {
-      addToSiteHistory(e.url);
-      ipcRenderer.invoke('save-site-history-entry', e.url).catch(err => 
-        console.error('Failed to save to file:', err)
-      );
-    }
   });
-
   webview.addEventListener('did-finish-load', () => {
-    const currentUrl = webview.getURL();
-    if (currentUrl.startsWith('http') && !currentUrl.includes('browser://')) {
-      addToSiteHistory(currentUrl);
-      ipcRenderer.invoke('save-site-history-entry', currentUrl);
-    }
+    scheduleUpdateNavButtons();
   });
 
   webview.addEventListener('new-window', e => {
@@ -393,7 +372,7 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   if (homeContainer) homeContainer.classList.remove('active');
   webview.classList.add('active');
 
-  updateNavButtons();
+  scheduleUpdateNavButtons();
   // Activate converted webview tab and update UI
   setActiveTab(tabId);
   scheduleRenderTabs();
@@ -403,7 +382,7 @@ function handleNavigation(tabId, newUrl) {
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
 
-  console.log('[DEBUG] handleNavigation called with:', newUrl);
+  debug('[DEBUG] handleNavigation called with:', newUrl);
 
   // --- record every real navigation into history ---
   if (tab.history[tab.historyIndex] !== newUrl) {
@@ -418,7 +397,7 @@ function handleNavigation(tabId, newUrl) {
       !newUrl.startsWith('file://') && 
       !newUrl.includes('browser://') &&
       newUrl.startsWith('http')) {
-    console.log('[DEBUG] Adding to site history:', newUrl);
+  debug('[DEBUG] Adding to site history:', newUrl);
     addToSiteHistory(newUrl);
     // Also send to main process for file storage
     ipcRenderer.invoke('save-site-history-entry', newUrl);
@@ -440,7 +419,7 @@ function handleNavigation(tabId, newUrl) {
   }
 
   scheduleRenderTabs();
-  updateNavButtons();
+  scheduleUpdateNavButtons();
 }
 
 
@@ -620,18 +599,19 @@ function goForward() {
 
 function updateNavButtons() {
   const webview = document.getElementById(`tab-${activeTabId}`);
-  const backBtn    = document.querySelector('.nav-left button:nth-child(1)');
-  const forwardBtn = document.querySelector('.nav-left button:nth-child(2)');
-
-  backBtn.disabled    = !webview || !webview.canGoBack();
-  forwardBtn.disabled = !webview || !webview.canGoForward();
+  if (!backBtnCached || !fwdBtnCached) {
+    backBtnCached = document.querySelector('.nav-left button:nth-child(1)');
+    fwdBtnCached  = document.querySelector('.nav-left button:nth-child(2)');
+  }
+  if (backBtnCached) backBtnCached.disabled = !webview || !webview.canGoBack();
+  if (fwdBtnCached)  fwdBtnCached.disabled  = !webview || !webview.canGoForward();
 }
 
 function reload() {
   const webview = document.getElementById(`tab-${activeTabId}`);
   if (webview) {
     webview.reload();
-    updateNavButtons();    // keep back/forward buttons in sync after a reload
+  scheduleUpdateNavButtons();    // keep back/forward buttons in sync after a reload
   }
 }
 
@@ -711,6 +691,13 @@ window.addEventListener('DOMContentLoaded', () => {
   const forwardBtn = document.querySelector('.nav-left button:nth-child(2)');
   backBtn.addEventListener('click', goBack);
   forwardBtn.addEventListener('click', goForward);
+  // cache for faster updates
+  backBtnCached = backBtn;
+  fwdBtnCached = forwardBtn;
+
+  // settings button
+  const settingsBtn = document.getElementById('open-settings-btn');
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
 
   // window control bindings
   const minBtn   = document.getElementById('min-btn');
@@ -782,6 +769,7 @@ try {
 // 4) unify context-menu wiring
 function showContextMenu(x,y) {
   if (!contextMenu) return;
+  lastContextPos = { x, y };
   contextMenu.style.top = `${y}px`;
   contextMenu.style.left = `${x}px`;
   contextMenu.classList.add('visible');
@@ -793,38 +781,40 @@ document.addEventListener('contextmenu', e => {
   }
 });
 document.addEventListener('click', ()=> contextMenu && contextMenu.classList.remove('visible'));
-menuItems.forEach(item => item.addEventListener('click', async evt => {
-  const action = item.dataset.action;
-  const win    = remote.getCurrentWindow();
+if (remote && fs) {
+  menuItems.forEach(item => item.addEventListener('click', async evt => {
+    const action = item.dataset.action;
+    const win    = remote.getCurrentWindow();
 
-  switch (action) {
-    case 'save-page': {
-      const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'page.html' });
-      if (!canceled && filePath) win.webContents.savePage(filePath, 'HTMLComplete');
-      break;
+    switch (action) {
+      case 'save-page': {
+        const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'page.html' });
+        if (!canceled && filePath) win.webContents.savePage(filePath, 'HTMLComplete');
+        break;
+      }
+      case 'select-all':
+        document.execCommand('selectAll');
+        break;
+      case 'screenshot': {
+        const image = await win.webContents.capturePage();
+        const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'screenshot.png' });
+        if (!canceled && filePath) fs.writeFileSync(filePath, image.toPNG());
+        break;
+      }
+      case 'view-source': {
+        const html = document.documentElement.outerHTML;
+        const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'source.html' });
+        if (!canceled && filePath) fs.writeFileSync(filePath, html);
+        break;
+      }
+      case 'inspect-accessibility':
+        win.webContents.inspectAccessibilityNode(lastContextPos.x, lastContextPos.y);
+        break;
+      case 'inspect-element':
+        win.webContents.inspectElement(lastContextPos.x, lastContextPos.y);
+        break;
     }
-    case 'select-all':
-      document.execCommand('selectAll');
-      break;
-    case 'screenshot': {
-      const image = await win.webContents.capturePage();
-      const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'screenshot.png' });
-      if (!canceled && filePath) fs.writeFileSync(filePath, image.toPNG());
-      break;
-    }
-    case 'view-source': {
-      const html = document.documentElement.outerHTML;
-      const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'source.html' });
-      if (!canceled && filePath) fs.writeFileSync(filePath, html);
-      break;
-    }
-    case 'inspect-accessibility':
-      win.webContents.inspectAccessibilityNode(e.clientX, e.clientY);
-      break;
-    case 'inspect-element':
-      win.webContents.inspectElement(e.clientX, e.clientY);
-      break;
-  }
 
-  contextMenu.classList.remove('visible');
-}));
+    contextMenu.classList.remove('visible');
+  }));
+}

@@ -28,7 +28,8 @@ html, body {
   padding: 6px 10px;
   background: #1e1e2e;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  /* flatter header to reduce paint cost */
+  box-shadow: none;
 }
 
 .nav-left,
@@ -72,7 +73,7 @@ html, body {
   padding: 6px 10px;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 120ms ease;
 }
 
 #nav button:hover {
@@ -179,7 +180,8 @@ html, body {
   margin: 0;
   height: 28px; /* reduce overall tab height */
   color: #ddd;
-  background: linear-gradient(180deg, #24262b 0%, #1f2025 100%);
+  /* use flat background to avoid gradient paints */
+  background: #24262b;
   border: 1px solid #2b2d34;
   border-bottom: none; /* let it visually merge with the strip line */
   border-radius: 6px 6px 0 0; /* slightly tighter radius */
@@ -189,17 +191,16 @@ html, body {
   min-width: 120px;
   flex: 0 1 180px; /* like Chrome: shrink when crowded */
   overflow: hidden;
-  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+  transition: background 120ms ease, color 120ms ease;
 }
 
-.tab:hover {
-  background: linear-gradient(180deg, #2a2c33 0%, #23252b 100%);
-}
+.tab:hover { background: #2a2c33; }
 
 .tab.active {
   color: #fff;
-  background: linear-gradient(180deg, #2f323a 0%, #2a2c33 100%);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 0 0 1px #3a3d46 inset;
+  background: #2f323a;
+  /* remove expensive inner shadows */
+  box-shadow: none;
 }
 
 .tab .tab-favicon {
@@ -228,7 +229,7 @@ html, body {
   background: transparent;
   color: #b5b5b5;
   opacity: 0; /* hidden by default */
-  transition: background .15s ease, color .15s ease, opacity .15s ease;
+  transition: background 120ms ease, color 120ms ease, opacity 120ms ease;
 }
 
 .tab:hover .tab-close,
@@ -249,7 +250,7 @@ html, body {
   background: #23252b;
   color: #d5d5d5;
   cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 .new-tab-button:hover { background: #2b2d34; color: #fff; border-color: #3a3d46; }
 .new-tab-button:active { background: #262830; }
@@ -301,7 +302,7 @@ html, body {
   color: white;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 120ms ease;
 }
 #window-controls button:hover {
   background: rgba(255,255,255,0.1);
@@ -323,4 +324,13 @@ html, body {
 }
 #tab-bar::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -74,10 +74,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Tabs: simple controller
 function activateTab(tabName) {
-  console.log('[TABS] Activating tab:', tabName);
   const links = document.querySelectorAll('.tab-link');
   const panels = document.querySelectorAll('.tab-panel');
-  console.log('[TABS] Found', links.length, 'tab links and', panels.length, 'panels');
   
   links.forEach(l => {
     const isActive = l.dataset.tab === tabName;
@@ -89,21 +87,17 @@ function activateTab(tabName) {
     const isActive = p.id === `panel-${tabName}`;
     p.classList.toggle('active', isActive);
     p.hidden = !isActive;
-    console.log('[TABS] Panel', p.id, 'active:', isActive);
+  // noop
   });
   try { localStorage.setItem(TAB_STORAGE_KEY, tabName); } catch {}
 }
 
 function initTabs() {
-  console.log('[TABS] Initializing tabs...');
   const links = document.querySelectorAll('.tab-link');
-  console.log('[TABS] Found tab links:', links.length);
   
   // Direct listeners (for accessibility focus handling)
   links.forEach((link, index) => {
-    console.log('[TABS] Setting up listener for tab', index, 'with data-tab:', link.dataset.tab);
     link.addEventListener('click', (e) => {
-      console.log('[TABS] Tab clicked:', link.dataset.tab);
       e.preventDefault();
       e.stopPropagation();
       const name = link.dataset.tab;
@@ -118,12 +112,9 @@ function initTabs() {
   // Delegation as a fallback if elements are re-rendered
   const tabContainer = document.querySelector('.tabs');
   if (tabContainer) {
-    console.log('[TABS] Setting up delegation on tabs container');
     tabContainer.addEventListener('click', (e) => {
-      console.log('[TABS] Container click detected');
       const btn = e.target && e.target.closest ? e.target.closest('.tab-link') : null;
       if (!btn || !tabContainer.contains(btn)) return;
-      console.log('[TABS] Delegated click for tab:', btn.dataset.tab);
       const name = btn.dataset.tab;
       if (!name) return;
       if (location.hash !== `#${name}`) {
@@ -139,13 +130,10 @@ function initTabs() {
     try { initial = localStorage.getItem(TAB_STORAGE_KEY) || null; } catch {}
   }
   if (!initial) initial = 'general';
-  console.log('[TABS] Initial tab:', initial);
   activateTab(initial);
 }
 
 // Initialize tabs after DOM is ready but before customization init uses the DOM
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('[TABS] DOM loaded, initializing tabs...');
   initTabs();
-  console.log('[TABS] Tabs initialized');
 });
