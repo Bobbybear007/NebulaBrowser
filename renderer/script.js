@@ -59,6 +59,9 @@ let bookmarks = [];
 
 // Efficient render scheduling to avoid redundant DOM work
 let tabsRenderPending = false;
+// Track previous order and positions for FLIP animations
+let lastTabOrder = [];
+let closingTabs = new Set();
 function scheduleRenderTabs() {
   if (tabsRenderPending) return;
   tabsRenderPending = true;
@@ -464,34 +467,70 @@ function setActiveTab(id) {
 }
 
 function closeTab(id) {
+  // Play closing animation on tab button, then remove
+  const btn = tabBarEl.querySelector(`[data-tab-id="${id}"]`);
+  if (btn && !closingTabs.has(id)) {
+    closingTabs.add(id);
+    btn.classList.add('tab--closing');
+    // Pre-calc which tab should become active if we're closing the active tab
+    const idx = tabs.findIndex(t => t.id === id);
+    const nextActiveId = (id === activeTabId)
+      ? (tabs[idx - 1]?.id ?? tabs[idx + 1]?.id ?? tabs[0]?.id)
+      : activeTabId;
+    btn.addEventListener('animationend', () => {
+      // Remove webview
+      const w = document.getElementById(`tab-${id}`);
+      if (w) w.remove();
+      // Remove from model
+      tabs = tabs.filter(t => t.id !== id);
+      // Choose a new active tab if needed
+      if (tabs.length > 0 && nextActiveId) setActiveTab(nextActiveId);
+      closingTabs.delete(id);
+      scheduleRenderTabs();
+      updateNavButtons();
+    }, { once: true });
+    return;
+  }
+  // Fallback (no button rendered yet)
   const w = document.getElementById(`tab-${id}`);
   if (w) w.remove();
-
   tabs = tabs.filter(t => t.id !== id);
-
-  if (id === activeTabId) {
-    if (tabs.length > 0) setActiveTab(tabs[0].id);
-  }
-
+  if (id === activeTabId && tabs.length > 0) setActiveTab(tabs[0].id);
   scheduleRenderTabs();
   updateNavButtons();
 }
 
 // 2) streamline renderTabs with a fragment
 function renderTabs() {
+  // Measure initial positions (First) for existing elements
+  const firstRects = new Map();
+  const existing = Array.from(tabBarEl.querySelectorAll('.tab'));
+  existing.forEach(el => {
+    firstRects.set(el.dataset.tabId, el.getBoundingClientRect());
+  });
+
   const frag = document.createDocumentFragment();
-  // ensure tablist role present
   if (tabBarEl && tabBarEl.getAttribute('role') !== 'tablist') {
     tabBarEl.setAttribute('role', 'tablist');
   }
+
+  // Create tab elements
+  const currentOrder = [];
   tabs.forEach(tab => {
     const el = document.createElement('div');
     el.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    el.classList.add('tab--flip');
     el.setAttribute('role', 'tab');
     el.setAttribute('aria-selected', String(tab.id === activeTabId));
     el.setAttribute('tabindex', tab.id === activeTabId ? '0' : '-1');
+    el.dataset.tabId = tab.id;
+    currentOrder.push(tab.id);
 
-    // favicon
+    if (!lastTabOrder.includes(tab.id)) {
+      // New tab enters with animation
+      el.classList.add('tab--enter');
+    }
+
     if (tab.favicon) {
       const icon = document.createElement('img');
       icon.src = tab.favicon;
@@ -499,13 +538,11 @@ function renderTabs() {
       el.appendChild(icon);
     }
 
-    // title
     const title = document.createElement('span');
     title.className = 'tab-title';
     title.textContent = getTabLabel(tab);
     el.appendChild(title);
 
-    // close
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-close';
     closeBtn.title = 'Close tab';
@@ -516,26 +553,19 @@ function renderTabs() {
     });
     el.appendChild(closeBtn);
 
-    // middle-click to close
     el.addEventListener('mousedown', (e) => {
-      if (e.button === 1) { // middle
+      if (e.button === 1) {
         e.preventDefault();
         closeTab(tab.id);
       }
     });
 
-    // make tab draggable
     el.draggable = true;
     el.addEventListener('dragstart', e => {
       e.dataTransfer.setData('tabId', tab.id);
-      // for Firefox compatibility
       e.dataTransfer.setData('text/plain', tab.id);
     });
-
-    // allow drop reordering
-    el.addEventListener('dragover', e => {
-      e.preventDefault();
-    });
+    el.addEventListener('dragover', e => { e.preventDefault(); });
     el.addEventListener('drop', e => {
       e.preventDefault();
       const draggedId = e.dataTransfer.getData('tabId') || e.dataTransfer.getData('text/plain');
@@ -543,7 +573,6 @@ function renderTabs() {
       const fromIndex = tabs.findIndex(t => t.id === draggedId);
       const toIndex = tabs.findIndex(t => t.id === tab.id);
       if (fromIndex === -1 || toIndex === -1) return;
-      // determine insert position: before or after depending on cursor
       const rect = el.getBoundingClientRect();
       const after = (e.clientX - rect.left) > rect.width / 2;
       const newIndex = toIndex + (after ? 1 : 0);
@@ -552,8 +581,6 @@ function renderTabs() {
       tabs.splice(adjIndex, 0, moved);
       scheduleRenderTabs();
     });
-
-    // tear off to new window if drag ends outside window
     el.addEventListener('dragend', e => {
       if (
         e.clientX < 0 || e.clientX > window.innerWidth ||
@@ -567,7 +594,8 @@ function renderTabs() {
     el.addEventListener('click', () => setActiveTab(tab.id));
     frag.appendChild(el);
   });
-  // Dedicated new-tab button at end
+
+  // New tab button
   const plus = document.createElement('button');
   plus.className = 'new-tab-button';
   plus.title = 'New tab';
@@ -576,8 +604,33 @@ function renderTabs() {
   plus.addEventListener('click', () => createTab());
   frag.appendChild(plus);
 
-  tabBarEl.innerHTML = '';           // clear once
-  tabBarEl.appendChild(frag);        // append in one shot
+  // Swap DOM: to support FLIP, we need to keep the old nodes around until we can measure Last
+  tabBarEl.innerHTML = '';
+  tabBarEl.appendChild(frag);
+
+  // Measure final positions (Last)
+  const lastRects = new Map();
+  Array.from(tabBarEl.querySelectorAll('.tab')).forEach(el => {
+    lastRects.set(el.dataset.tabId, el.getBoundingClientRect());
+  });
+
+  // Apply FLIP: invert then play
+  Array.from(tabBarEl.querySelectorAll('.tab')).forEach(el => {
+    const id = el.dataset.tabId;
+    const first = firstRects.get(id);
+    const last = lastRects.get(id);
+    if (!first || !last) return;
+    const dx = first.left - last.left;
+    const dy = first.top - last.top;
+    if (dx || dy) {
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      el.getBoundingClientRect(); // force reflow
+      el.style.transform = '';
+    }
+  });
+
+  // Update order for next render
+  lastTabOrder = currentOrder.slice();
 }
 
 // 1) handle URL sent by main for a detached window
