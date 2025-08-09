@@ -563,8 +563,33 @@
           console.log('[SETTINGS DEBUG] Displaying', siteHistory.length, 'site history items');
           siteHistory.forEach(item => {
             const li = document.createElement('li');
-            li.textContent = item;
             li.style.wordBreak = 'break-all';
+            // Create a clickable link that asks host to navigate in a new tab
+            const a = document.createElement('a');
+            a.href = item;
+            a.textContent = item;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.color = 'var(--accent)';
+            a.style.textDecoration = 'none';
+            a.addEventListener('click', (e) => {
+              e.preventDefault();
+              try {
+                if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+                  // Ask the host to open this URL in a new tab to keep Settings open
+                  window.electronAPI.sendToHost('navigate', item, { newTab: true });
+                } else if (window.parent) {
+                  // Fallback: postMessage to parent if available
+                  window.parent.postMessage({ type: 'navigate', url: item }, '*');
+                } else {
+                  // Last resort: open in this webview
+                  window.location.href = item;
+                }
+              } catch (err) {
+                console.error('[SETTINGS DEBUG] Failed to trigger navigation for', item, err);
+              }
+            });
+            li.appendChild(a);
             siteList.appendChild(li);
           });
         } else {

@@ -214,7 +214,16 @@ function createTab(inputUrl) {
 
   // After creating dynamic webview:
   webview.addEventListener('ipc-message', e => {
-    if (e.channel === 'theme-update') {
+    if (e.channel === 'navigate' && e.args[0]) {
+      const targetUrl = e.args[0];
+      const opts = e.args[1] || {};
+      if (opts.newTab) {
+        createTab(targetUrl);
+      } else {
+        urlBox.value = targetUrl;
+        navigate();
+      }
+    } else if (e.channel === 'theme-update') {
       const home = document.getElementById('home-webview');
       if (home) home.send('theme-update', ...e.args);
     }
@@ -658,8 +667,15 @@ window.addEventListener('DOMContentLoaded', () => {
   webviewsEl.addEventListener('ipc-message', (e) => {
     // Navigation messages from home or other pages
     if (e.channel === 'navigate' && e.args[0]) {
-      urlBox.value = e.args[0];
-      navigate();
+      const targetUrl = e.args[0];
+      const opts = e.args[1] || {};
+      if (opts.newTab) {
+        // Open in a new tab, leaving settings/home intact
+        createTab(targetUrl);
+      } else {
+        urlBox.value = targetUrl;
+        navigate();
+      }
     }
     // Theme update from settings webview
     if (e.channel === 'theme-update' && e.args[0]) {
@@ -669,11 +685,15 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  // Fallback: listen for postMessage navigations from home webview
+  // Fallback: listen for postMessage navigations from embedded pages (home/settings)
   window.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'navigate' && event.data.url) {
-      urlBox.value = event.data.url;
-      navigate();
+      if (event.data.newTab) {
+        createTab(event.data.url);
+      } else {
+        urlBox.value = event.data.url;
+        navigate();
+      }
     }
   });
   // only now bind the reload button (guaranteed to exist)
