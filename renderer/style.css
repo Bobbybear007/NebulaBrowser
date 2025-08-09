@@ -7,21 +7,17 @@ html, body {
   font-family: 'Segoe UI', sans-serif;
 }
 
+/* TAB STRIP */
 #tab-bar {
   display: flex;
-  padding-left: 80px; /* leave room for macOS traffic lights */
-  overflow-x: auto; /* allow scrolling when many tabs */
-  /* custom scrollbar styling */
+  align-items: flex-end;
+  gap: 2px;
+  padding: 2px 6px 0 6px; /* slimmer top padding */
+  background: #1b1c20; /* strip background like modern browsers */
+  border-bottom: 1px solid #2a2c33; /* hairline under tabs */
+  overflow-x: auto; /* scroll when many tabs */
   scrollbar-color: #444 #2a2a3c;   /* thumb and track for Firefox */
   scrollbar-width: thin;            /* slimmer track */
-}
-
-#tab-bar > * {
-  flex: 1 1 0;
-  text-align: center;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 /* NAVBAR LAYOUT */
@@ -175,44 +171,88 @@ html, body {
 
 /* TABS */
 .tab {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  margin: 4px 4px 0 0;
-  background: #222;
-  border-radius: 8px 8px 0 0;
+  gap: 8px;
+  padding: 4px 8px; /* slimmer padding */
+  margin: 0;
+  height: 28px; /* reduce overall tab height */
+  color: #ddd;
+  background: linear-gradient(180deg, #24262b 0%, #1f2025 100%);
+  border: 1px solid #2b2d34;
+  border-bottom: none; /* let it visually merge with the strip line */
+  border-radius: 6px 6px 0 0; /* slightly tighter radius */
   cursor: pointer;
-  transition: background 0.2s, flex 0.2s;
-  min-width: 80px; /* prevent tabs from getting too small */
+  user-select: none;
+  max-width: 260px;
+  min-width: 120px;
+  flex: 0 1 180px; /* like Chrome: shrink when crowded */
+  overflow: hidden;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
 }
 
 .tab:hover {
-  background: #333;
+  background: linear-gradient(180deg, #2a2c33 0%, #23252b 100%);
 }
 
 .tab.active {
-  background: #444;
-  font-weight: bold;
-  flex: 3 1 0; /* increased grow factor for larger active tab */
-  min-width: 120px; /* larger min width for the active tab */
+  color: #fff;
+  background: linear-gradient(180deg, #2f323a 0%, #2a2c33 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 0 0 1px #3a3d46 inset;
 }
 
-.tab img {
+.tab .tab-favicon {
   width: 16px;
   height: 16px;
-  margin-right: 6px;
   border-radius: 2px;
+  flex: 0 0 auto;
 }
 
-.tab button {
-  margin-left: 8px;
-  background: none;
-  border: none;
-  color: #f55;
-  font-weight: bold;
-  cursor: pointer;
+.tab .tab-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
 }
+
+.tab .tab-close {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: #b5b5b5;
+  opacity: 0; /* hidden by default */
+  transition: background .15s ease, color .15s ease, opacity .15s ease;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close { opacity: 1; }
+.tab .tab-close:hover { background: #3b3e47; color: #fff; }
+.tab .tab-close:active { background: #2e3139; }
+
+/* New tab (+) button aligned to the right end of the strip */
+.new-tab-button {
+  margin-left: 6px;
+  flex: 0 0 auto;
+  width: 24px;  /* tighter button */
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid #2b2d34;
+  background: #23252b;
+  color: #d5d5d5;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.new-tab-button:hover { background: #2b2d34; color: #fff; border-color: #3a3d46; }
+.new-tab-button:active { background: #262830; }
 
 /* ZOOM CONTROLS */
 .zoom-controls {

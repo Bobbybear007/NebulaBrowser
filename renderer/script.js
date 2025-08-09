@@ -486,35 +486,80 @@ function closeTab(id) {
 // 2) streamline renderTabs with a fragment
 function renderTabs() {
   const frag = document.createDocumentFragment();
+  // ensure tablist role present
+  if (tabBarEl && tabBarEl.getAttribute('role') !== 'tablist') {
+    tabBarEl.setAttribute('role', 'tablist');
+  }
   tabs.forEach(tab => {
     const el = document.createElement('div');
     el.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    el.setAttribute('role', 'tab');
+    el.setAttribute('aria-selected', String(tab.id === activeTabId));
+    el.setAttribute('tabindex', tab.id === activeTabId ? '0' : '-1');
 
+    // favicon
     if (tab.favicon) {
       const icon = document.createElement('img');
       icon.src = tab.favicon;
-      icon.style.width = '16px';
-      icon.style.height = '16px';
-      icon.style.marginRight = '6px';
+      icon.className = 'tab-favicon';
       el.appendChild(icon);
     }
 
-  el.appendChild(document.createTextNode(getTabLabel(tab)));
+    // title
+    const title = document.createElement('span');
+    title.className = 'tab-title';
+    title.textContent = getTabLabel(tab);
+    el.appendChild(title);
 
+    // close
     const closeBtn = document.createElement('button');
+    closeBtn.className = 'tab-close';
+    closeBtn.title = 'Close tab';
     closeBtn.textContent = '×';
-    closeBtn.onclick = (e) => {
+    closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       closeTab(tab.id);
-    };
+    });
+    el.appendChild(closeBtn);
 
-    // 2a) make tab draggable
+    // middle-click to close
+    el.addEventListener('mousedown', (e) => {
+      if (e.button === 1) { // middle
+        e.preventDefault();
+        closeTab(tab.id);
+      }
+    });
+
+    // make tab draggable
     el.draggable = true;
     el.addEventListener('dragstart', e => {
       e.dataTransfer.setData('tabId', tab.id);
+      // for Firefox compatibility
+      e.dataTransfer.setData('text/plain', tab.id);
     });
 
-    // 2b) on dragend outside window, open in new window and close here
+    // allow drop reordering
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+    });
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData('tabId') || e.dataTransfer.getData('text/plain');
+      if (!draggedId || draggedId === tab.id) return;
+      const fromIndex = tabs.findIndex(t => t.id === draggedId);
+      const toIndex = tabs.findIndex(t => t.id === tab.id);
+      if (fromIndex === -1 || toIndex === -1) return;
+      // determine insert position: before or after depending on cursor
+      const rect = el.getBoundingClientRect();
+      const after = (e.clientX - rect.left) > rect.width / 2;
+      const newIndex = toIndex + (after ? 1 : 0);
+      const [moved] = tabs.splice(fromIndex, 1);
+      const adjIndex = fromIndex < newIndex ? newIndex - 1 : newIndex;
+      tabs.splice(adjIndex, 0, moved);
+      scheduleRenderTabs();
+    });
+
+    // tear off to new window if drag ends outside window
     el.addEventListener('dragend', e => {
       if (
         e.clientX < 0 || e.clientX > window.innerWidth ||
@@ -525,15 +570,16 @@ function renderTabs() {
       }
     });
 
-    el.onclick = () => setActiveTab(tab.id);
-    el.appendChild(closeBtn);
+    el.addEventListener('click', () => setActiveTab(tab.id));
     frag.appendChild(el);
   });
-  // add the “+” at the end
-  const plus = document.createElement('div');
-  plus.className = 'tab';
+  // Dedicated new-tab button at end
+  const plus = document.createElement('button');
+  plus.className = 'new-tab-button';
+  plus.title = 'New tab';
+  plus.setAttribute('aria-label', 'New tab');
   plus.textContent = '+';
-  plus.onclick = () => createTab();
+  plus.addEventListener('click', () => createTab());
   frag.appendChild(plus);
 
   tabBarEl.innerHTML = '';           // clear once
