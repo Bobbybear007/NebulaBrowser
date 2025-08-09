@@ -99,73 +99,12 @@ function createWindow(startUrl) {
     win.loadURL(url);
   });
 
-  // ensure all embedded <webview> tags also use the same window
+  // ensure all embedded <webview> tags behave predictably without heavy injections
   win.webContents.on('did-attach-webview', (event, webContents) => {
-    // Set up webview with preload script to provide electronAPI - fixed injection
-    webContents.on('dom-ready', () => {
-      // Simpler, more reliable API injection that doesn't require cloning
-      webContents.executeJavaScript(`
-        if (!window.electronAPI) {
-          // Create a simple bridge without complex objects
-          window.electronAPI = {
-            invoke: function(channel) {
-              const args = Array.prototype.slice.call(arguments, 1);
-              return new Promise(function(resolve, reject) {
-                try {
-                  const ipcRenderer = require('electron').ipcRenderer;
-                  ipcRenderer.invoke(channel, ...args).then(resolve).catch(reject);
-                } catch (err) {
-                  reject(err);
-                }
-              });
-            }
-          };
-          console.log('electronAPI injected successfully');
-        }
-      `).catch(err => {
-        console.error('Failed to inject electronAPI:', err);
-        // Fallback: inject minimal API
-        webContents.executeJavaScript(`
-          window.electronAPI = { invoke: function() { return Promise.resolve(); } };
-        `).catch(() => {});
-      });
-    });
-
-    // intercept window.open() inside webview
+    // Let the renderer/webview handle navigation; avoid extra JS injection that can stall
     webContents.setWindowOpenHandler(({ url }) => {
       webContents.loadURL(url);
-      // record history for webview navigations
-      recordHistory('site-history.json', url);
-      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-      if (m && m[1]) {
-        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-        recordHistory('search-history.json', query);
-      }
       return { action: 'deny' };
-    });
-    // intercept legacy new-window on webview
-    webContents.on('new-window', (e, url) => {
-      e.preventDefault();
-      webContents.loadURL(url);
-      // record history for webview navigations
-      recordHistory('site-history.json', url);
-      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-      if (m && m[1]) {
-        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-        recordHistory('search-history.json', query);
-      }
-    });
-    // intercept navigation on webview (e.g. user clicks link)
-    webContents.on('will-navigate', (e, url) => {
-      e.preventDefault();
-      webContents.loadURL(url);
-      // record history for webview navigations
-      recordHistory('site-history.json', url);
-      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-      if (m && m[1]) {
-        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-        recordHistory('search-history.json', query);
-      }
     });
   });
 
@@ -189,69 +128,7 @@ function createWindow(startUrl) {
     perfMonitor.trackLoadTime(win.webContents.getURL(), loadTime);
   });
 
-  // Debounced history recording to prevent excessive I/O
-  let historyTimeout;
-  const recordHistory = async (fileName, entry) => {
-    // Clear existing timeout
-    if (historyTimeout) {
-      clearTimeout(historyTimeout);
-    }
-    
-    // Debounce history recording by 500ms
-    historyTimeout = setTimeout(async () => {
-      if (fileName === 'site-history.json') {
-        // Save to both file and send to renderer
-        const filePath = path.join(__dirname, fileName);
-        let data = [];
-        try { 
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-          data = JSON.parse(fileContent); 
-        } catch {}
-        
-        if (data[0] !== entry) {
-          data.unshift(entry);
-          if (data.length > 100) data.pop();
-          
-          // Use async file operations to prevent blocking
-          try {
-            await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
-          } catch (err) {
-            console.error('Error writing site history:', err);
-          }
-        }
-        // Also send to renderer for localStorage
-        win.webContents.send('record-site-history', entry);
-      } else {
-        // Keep search history in JSON file for now
-        const filePath = path.join(__dirname, fileName);
-        let data = [];
-        try { 
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-          data = JSON.parse(fileContent); 
-        } catch {}
-        
-        if (data[0] !== entry) {
-          data.unshift(entry);
-          if (data.length > 100) data.pop();
-          
-          try {
-            await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
-          } catch (err) {
-            console.error('Error writing search history:', err);
-          }
-        }
-      }
-    }, 500);
-  };
-
-  win.webContents.on('did-navigate', (event, url) => {
-    recordHistory('site-history.json', url);
-    const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-    if (m && m[1]) {
-      const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-      recordHistory('search-history.json', query);
-    }
-  });
+  // Renderer manages history; no main-process recording here
 }
 
 // This method will be called when Electron has finished initialization
@@ -350,10 +227,9 @@ ipcMain.handle('window-close', event => {
 // Site history is now handled via localStorage in the renderer
 // But keep these handlers for compatibility and potential future use
 ipcMain.handle('load-site-history', async () => {
-  // Read from the site history file for settings page
   const filePath = path.join(__dirname, 'site-history.json');
   try {
-    const data = fs.readFileSync(filePath, 'utf-8');
+    const data = await fs.promises.readFile(filePath, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
     return [];
@@ -361,10 +237,9 @@ ipcMain.handle('load-site-history', async () => {
 });
 
 ipcMain.handle('save-site-history', async (event, history) => {
-  // Save to both file and localStorage
   const filePath = path.join(__dirname, 'site-history.json');
   try {
-    fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(history, null, 2));
     return true;
   } catch (err) {
     return false;
@@ -374,7 +249,7 @@ ipcMain.handle('save-site-history', async (event, history) => {
 ipcMain.handle('clear-site-history', async () => {
   const filePath = path.join(__dirname, 'site-history.json');
   try {
-    fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify([], null, 2));
     return true;
   } catch (err) {
     return false;
@@ -384,7 +259,7 @@ ipcMain.handle('clear-site-history', async () => {
 ipcMain.handle('load-search-history', async () => {
   const filePath = path.join(__dirname, 'search-history.json');
   try {
-    const data = fs.readFileSync(filePath, 'utf-8');
+    const data = await fs.promises.readFile(filePath, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
     return [];
@@ -394,7 +269,7 @@ ipcMain.handle('load-search-history', async () => {
 ipcMain.handle('save-search-history', async (event, history) => {
   const filePath = path.join(__dirname, 'search-history.json');
   try {
-    fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(history, null, 2));
     return true;
   } catch (err) {
     return false;
@@ -410,24 +285,24 @@ ipcMain.on('homepage-changed', (event, url) => {
 ipcMain.handle('load-bookmarks', async () => {
   try {
     const bookmarksPath = path.join(__dirname, 'bookmarks.json');
-    if (fs.existsSync(bookmarksPath)) {
-      const data = fs.readFileSync(bookmarksPath, 'utf8');
-      const bookmarks = JSON.parse(data);
-      console.log(`Loaded ${bookmarks.length} bookmarks from file`);
-      return bookmarks;
+    try {
+      await fs.promises.access(bookmarksPath);
+    } catch {
+      console.log('No bookmarks file found, starting with empty array');
+      return [];
     }
-    console.log('No bookmarks file found, starting with empty array');
-    return [];
+    const data = await fs.promises.readFile(bookmarksPath, 'utf8');
+    const bookmarks = JSON.parse(data);
+    console.log(`Loaded ${bookmarks.length} bookmarks from file`);
+    return bookmarks;
   } catch (error) {
     console.error('Error loading bookmarks:', error);
     // Try to create a backup if the file is corrupted
     const bookmarksPath = path.join(__dirname, 'bookmarks.json');
     const backupPath = path.join(__dirname, `bookmarks.backup.${Date.now()}.json`);
     try {
-      if (fs.existsSync(bookmarksPath)) {
-        fs.copyFileSync(bookmarksPath, backupPath);
-        console.log(`Corrupted bookmarks file backed up to: ${backupPath}`);
-      }
+      await fs.promises.copyFile(bookmarksPath, backupPath);
+      console.log(`Corrupted bookmarks file backed up to: ${backupPath}`);
     } catch (backupError) {
       console.error('Failed to create backup:', backupError);
     }
@@ -438,14 +313,12 @@ ipcMain.handle('load-bookmarks', async () => {
 ipcMain.handle('save-bookmarks', async (event, bookmarks) => {
   try {
     const bookmarksPath = path.join(__dirname, 'bookmarks.json');
-    
-    // Create a backup before saving
-    if (fs.existsSync(bookmarksPath)) {
+    try {
+      await fs.promises.access(bookmarksPath);
       const backupPath = path.join(__dirname, 'bookmarks.backup.json');
-      fs.copyFileSync(bookmarksPath, backupPath);
-    }
-    
-    fs.writeFileSync(bookmarksPath, JSON.stringify(bookmarks, null, 2));
+      await fs.promises.copyFile(bookmarksPath, backupPath);
+    } catch {}
+    await fs.promises.writeFile(bookmarksPath, JSON.stringify(bookmarks, null, 2));
     console.log(`Saved ${bookmarks.length} bookmarks to file`);
     return true;
   } catch (error) {
@@ -514,21 +387,16 @@ ipcMain.handle('save-site-history-entry', async (event, url) => {
   const filePath = path.join(__dirname, 'site-history.json');
   try {
     let data = [];
-    try { 
-      data = JSON.parse(fs.readFileSync(filePath, 'utf8')); 
+    try {
+      const raw = await fs.promises.readFile(filePath, 'utf8');
+      data = JSON.parse(raw);
     } catch {}
-    
     // Remove if already exists to avoid duplicates
     data = data.filter(item => item !== url);
-    // Add to beginning
+    // Add to beginning and clamp size
     data.unshift(url);
-    // Keep only last 100 entries
-    if (data.length > 100) {
-      data = data.slice(0, 100);
-    }
-    
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    console.log('[MAIN] Saved site history entry:', url);
+    if (data.length > 100) data = data.slice(0, 100);
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
     return true;
   } catch (err) {
     console.error('[MAIN] Error saving site history entry:', err);

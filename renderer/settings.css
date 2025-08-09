@@ -29,11 +29,73 @@ body {
 
 .container {
   background-color: var(--dark-purple);
-  padding: 2rem;
+  padding: 0;
   border-radius: 16px;
   box-shadow: 0 0 10px rgba(0,0,0,0.5);
-  max-width: 500px;
+  max-width: 1100px;
   width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar + content layout */
+.sidebar {
+  width: 260px;
+  background: rgba(0,0,0,0.2);
+  border-right: 1px solid rgba(255,255,255,0.08);
+  padding: 1.25rem 1rem;
+}
+
+.sidebar h1 {
+  font-size: 1.2rem;
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tab-link {
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.tab-link:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.tab-link.active {
+  background: rgba(123, 46, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(123,46,255,0.35);
+}
+
+.content {
+  flex: 1;
+  padding: 1.25rem 1.5rem 2rem 1.5rem;
+  overflow: auto;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
 }
 
 h1 {
@@ -132,10 +194,20 @@ button:hover {
 /* small-screen adjustments */
 @media (max-width: 480px) {
   .container {
-    padding: 1rem;
-    border-radius: 0;
-    box-shadow: none;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.35);
+    flex-direction: column;
+    max-width: 100%;
   }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 0.5rem;
+  }
+  .tabs { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .tab-link { flex: 1 1 auto; }
   h1 {
     font-size: 1.25rem;
   }

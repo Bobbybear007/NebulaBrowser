@@ -53,6 +53,30 @@ let activeTabId = null;
 const allowedInternalPages = ['settings', 'home'];
 let bookmarks = [];
 
+// Efficient render scheduling to avoid redundant DOM work
+let tabsRenderPending = false;
+function scheduleRenderTabs() {
+  if (tabsRenderPending) return;
+  tabsRenderPending = true;
+  requestAnimationFrame(() => {
+    tabsRenderPending = false;
+    renderTabs();
+  });
+}
+
+// Derive a stable, safe label for a tab without throwing on non-URLs
+function getTabLabel(tab) {
+  if (tab.title && tab.title !== 'New Tab') return tab.title;
+  const u = tab.url || '';
+  try {
+    if (u.startsWith('http')) return new URL(u).hostname;
+    if (u.startsWith('browser://')) return u.replace('browser://', '');
+    return u || 'New Tab';
+  } catch {
+    return u || 'New Tab';
+  }
+}
+
 // Load bookmarks on startup
 async function loadBookmarks() {
   try {
@@ -107,9 +131,9 @@ function createTab(inputUrl) {
         isHome: true
     };
     tabs.push(tab);
-    setActiveTab(id);
-    // Render the tab bar so the new home tab appears
-    renderTabs();
+  setActiveTab(id);
+  // Render the tab bar so the new home tab appears
+  scheduleRenderTabs();
     return id;
   }
   
@@ -208,7 +232,7 @@ function createTab(inputUrl) {
   });
 
   setActiveTab(id);
-  renderTabs();
+  scheduleRenderTabs();
 }
 
 
@@ -236,7 +260,7 @@ function updateTabMetadata(id, key, value) {
   const tab = tabs.find(t => t.id === id);
   if (tab) {
     tab[key] = value;
-    renderTabs();
+  scheduleRenderTabs();
   }
 }
 
@@ -276,7 +300,7 @@ function navigate() {
   tab.url = input; 
   webview.src = resolved;
 
-  renderTabs();
+  scheduleRenderTabs();
   updateNavButtons();
 }
 
@@ -363,7 +387,7 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   updateNavButtons();
   // Activate converted webview tab and update UI
   setActiveTab(tabId);
-  renderTabs();
+  scheduleRenderTabs();
 }
 
 function handleNavigation(tabId, newUrl) {
@@ -406,7 +430,7 @@ function handleNavigation(tabId, newUrl) {
     urlBox.value = displayUrl === 'browser://home' ? '' : displayUrl;
   }
 
-  renderTabs();
+  scheduleRenderTabs();
   updateNavButtons();
 }
 
@@ -439,7 +463,7 @@ function setActiveTab(id) {
   if (tab) {
     // If the tab URL represents the home page, keep the URL bar blank.
     urlBox.value = tab.url === 'browser://home' ? '' : tab.url;
-    renderTabs();
+  scheduleRenderTabs();
     updateNavButtons();
     updateZoomUI();            // ← update zoom display for new active tab
   }
@@ -455,7 +479,7 @@ function closeTab(id) {
     if (tabs.length > 0) setActiveTab(tabs[0].id);
   }
 
-  renderTabs();
+  scheduleRenderTabs();
   updateNavButtons();
 }
 
@@ -475,7 +499,7 @@ function renderTabs() {
       el.appendChild(icon);
     }
 
-    el.appendChild(document.createTextNode(tab.title || new URL(tab.url).hostname));
+  el.appendChild(document.createTextNode(getTabLabel(tab)));
 
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '×';
@@ -572,17 +596,7 @@ menuBtn.addEventListener('click', () => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Add some debug info
-  console.log('[DEBUG] Site history initialized, current entries:', getSiteHistory().length);
-  
-  // Add test entries if none exist (for debugging)
-  if (getSiteHistory().length === 0) {
-    console.log('[DEBUG] No existing history, adding test entries for debugging');
-    addToSiteHistory('https://www.google.com');
-    addToSiteHistory('https://github.com');
-    console.log('[DEBUG] Test entries added, history now:', getSiteHistory());
-  }
-  
+  // Initial boot
   createTab();
   // Handle IPC messages from the static home webview (bookmarks navigation)
   const staticHome = document.getElementById('home-webview');
@@ -651,65 +665,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('zoom-percent').textContent = `${Math.round(z * 100)}%`;
   });
 
-  // menu‐related code (moved here so #context-menu exists)
-  const items = contextMenu ? contextMenu.querySelectorAll('li') : [];
-
-  function showContextMenu(x, y) {
-    if (!menu) return;
-    menu.style.top = `${y}px`;
-    menu.style.left = `${x}px`;
-    menu.classList.add('visible');
-  }
-
-  document.addEventListener('contextmenu', e => {
-    if (e.target.tagName === 'WEBVIEW' ||
-        e.composedPath().some(el => el.id === 'webviews')) {
-      e.preventDefault();
-      showContextMenu(e.clientX, e.clientY);
-    }
-  });
-
-  document.addEventListener('click', () => {
-    if (menu) menu.classList.remove('visible');
-  });
-
-  items.forEach(item => {
-    item.addEventListener('click', async () => {
-      const action = item.dataset.action;
-      const win = remote.getCurrentWindow();
-
-      switch (action) {
-        case 'save-page': {
-          const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'page.html' });
-          if (!canceled && filePath) win.webContents.savePage(filePath, 'HTMLComplete');
-          break;
-        }
-        case 'select-all':
-          document.execCommand('selectAll');
-          break;
-        case 'screenshot': {
-          const image = await win.webContents.capturePage();
-          const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'screenshot.png' });
-          if (!canceled && filePath) fs.writeFileSync(filePath, image.toPNG());
-          break;
-        }
-        case 'view-source': {
-          const html = document.documentElement.outerHTML;
-          const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'source.html' });
-          if (!canceled && filePath) fs.writeFileSync(filePath, html);
-          break;
-        }
-        case 'inspect-accessibility':
-          win.webContents.inspectAccessibilityNode(e.clientX, e.clientY);
-          break;
-        case 'inspect-element':
-          win.webContents.inspectElement(e.clientX, e.clientY);
-          break;
-      }
-
-      menu.classList.remove('visible');
-    });
-  });
+  // (Removed broken duplicate context menu wiring)
 
   // Migrate existing site history from JSON file to localStorage (one-time migration)
   const migrateSiteHistory = async () => {

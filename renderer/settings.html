@@ -240,25 +240,35 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>⚙️ Browser Settings</h1>
+  <div class="container" role="application">
+    <aside class="sidebar" aria-label="Settings categories">
+      <h1>⚙️ Settings</h1>
+      <nav class="tabs" role="tablist">
+        <button class="tab-link active" role="tab" aria-selected="true" aria-controls="panel-general" id="tab-general" data-tab="general">General</button>
+        <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-appearance" id="tab-appearance" data-tab="appearance">Appearance</button>
+        <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-history" id="tab-history" data-tab="history">History</button>
+        <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-about" id="tab-about" data-tab="about">About</button>
+      </nav>
+    </aside>
 
-    <div class="setting-group">
-      <label for="clear-data-btn">Clear All Cookies &amp; Data</label>
-      <button id="clear-data-btn">Clear Data</button>
-    </div>
+    <main class="content">
+      <!-- General Panel -->
+      <section class="tab-panel active" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
+        <h2>General</h2>
+        <div class="setting-group">
+          <label for="clear-data-btn">Clear All Cookies &amp; Data</label>
+          <button id="clear-data-btn">Clear Data</button>
+        </div>
+        <p class="note">Settings are stored locally on this device.</p>
+        <div class="debug-info" id="debug-info">Loading debug info...</div>
+      </section>
 
-    <p class="note">Settings are stored locally on this device.</p>
-
-    <div class="debug-info" id="debug-info">Loading debug info...</div>
-
-    <!-- Customization Section -->
-    <section>
-      <h2>🎨 Browser Customization</h2>
-      
-      <!-- Theme Selection -->
-      <div class="customization-group">
-        <h3>Theme Presets</h3>
+      <!-- Appearance Panel -->
+      <section class="tab-panel" id="panel-appearance" role="tabpanel" aria-labelledby="tab-appearance">
+        <h2>🎨 Appearance</h2>
+        <!-- Theme Selection -->
+        <div class="customization-group">
+          <h3>Theme Presets</h3>
         <div class="theme-selector">
           <button id="theme-default" class="theme-btn" data-theme="default">
             <div class="theme-preview" style="background: linear-gradient(145deg, #121418, #1B1035);"></div>
@@ -313,11 +323,11 @@
             <span>Custom</span>
           </button>
         </div>
-      </div>
+        </div>
 
-      <!-- Color Customization -->
-      <div class="customization-group">
-        <h3>Custom Colors</h3>
+        <!-- Color Customization -->
+        <div class="customization-group">
+          <h3>Custom Colors</h3>
         <div class="color-controls">
           <div class="color-group">
             <label for="bg-color">Background:</label>
@@ -340,11 +350,11 @@
             <input type="color" id="text-color" value="#E0E0E0">
           </div>
         </div>
-      </div>
+        </div>
 
-      <!-- Home Page Layout -->
-      <div class="customization-group">
-        <h3>Home Page Layout</h3>
+        <!-- Home Page Layout -->
+        <div class="customization-group">
+          <h3>Home Page Layout</h3>
         <div class="layout-options">
           <label>
             <input type="radio" name="layout" value="centered" checked>
@@ -359,11 +369,11 @@
             <span>Compact View</span>
           </label>
         </div>
-      </div>
+        </div>
 
-      <!-- Logo Customization -->
-      <div class="customization-group">
-        <h3>Logo & Branding</h3>
+        <!-- Logo Customization -->
+        <div class="customization-group">
+          <h3>Logo & Branding</h3>
         <div class="logo-options">
           <label for="show-logo">
             <input type="checkbox" id="show-logo" checked>
@@ -374,11 +384,11 @@
             <input type="text" id="custom-title" placeholder="Nebula Browser" maxlength="50">
           </label>
         </div>
-      </div>
+        </div>
 
-      <!-- Theme Management -->
-      <div class="customization-group">
-        <h3>Theme Management</h3>
+        <!-- Theme Management -->
+        <div class="customization-group">
+          <h3>Theme Management</h3>
         <div class="theme-management">
           <button id="save-custom-theme">Save Current as Custom Theme</button>
           <button id="export-theme">Export Theme</button>
@@ -386,11 +396,11 @@
           <input type="file" id="theme-file-input" accept=".json" style="display: none;">
           <button id="reset-to-default">Reset to Default</button>
         </div>
-      </div>
+        </div>
 
-      <!-- Live Preview -->
-      <div class="customization-group">
-        <h3>Preview</h3>
+        <!-- Live Preview -->
+        <div class="customization-group">
+          <h3>Preview</h3>
         <div class="preview-container" id="preview-container">
           <div class="preview-home">
             <div class="preview-logo" id="preview-logo">../assets/images/Logos/Nebula-Logo.svg</div>
@@ -403,21 +413,34 @@
             </div>
           </div>
         </div>
-      </div>
-    </section>
+        </div>
+      </section>
 
-    <!-- add history views -->
-    <section>
-      <h2>Search History</h2>
-      <ul id="search-history-list"></ul>
-      <button id="clear-search-history-btn" style="margin-top: 10px;">Clear Search History</button>
-    </section>
-    <section>
-      <h2>Site History</h2>
-      <ul id="site-history-list"></ul>
-      <button id="clear-site-history-btn" style="margin-top: 10px;">Clear Site History</button>
-      <button id="add-test-history-btn" style="margin-top: 10px; margin-left: 10px;">Add Test History</button>
-    </section>
+      <!-- History Panel -->
+      <section class="tab-panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+        <h2>History</h2>
+        <div class="customization-group">
+          <h3>Search History</h3>
+          <ul id="search-history-list"></ul>
+          <button id="clear-search-history-btn" style="margin-top: 10px;">Clear Search History</button>
+        </div>
+        <div class="customization-group">
+          <h3>Site History</h3>
+          <ul id="site-history-list"></ul>
+          <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <button id="clear-site-history-btn">Clear Site History</button>
+            <button id="add-test-history-btn">Add Test History</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- About Panel -->
+      <section class="tab-panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about">
+        <h2>About</h2>
+        <p class="note">Nebula Browser Experimental Settings</p>
+        <p class="note">Version info and links can go here.</p>
+      </section>
+    </main>
   </div>
 
   <!-- status overlay moved outside of .container -->
