@@ -226,6 +226,9 @@ function createTab(inputUrl) {
     }
   });
 
+  // Ensure interacting with the webview closes any open menu popup
+  attachCloseMenuOnInteract(webview);
+
   webviewsEl.appendChild(webview);
 
   tabs.push({
@@ -359,6 +362,9 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
 
   // Add webview to DOM
   webviewsEl.appendChild(webview);
+
+  // Ensure interacting with the webview closes any open menu popup
+  attachCloseMenuOnInteract(webview);
 
   // Update tab properties
   tab.isHome = false;
@@ -622,13 +628,49 @@ function openSettings() {
 
 // Toggle menu dropdown
 const menuBtn = document.getElementById('menu-btn');
+const menuWrapper = document.querySelector('.menu-wrapper');
 
-menuBtn.addEventListener('click', () => {
+// Open/close on button click; stop propagation so outside-click handler doesn't immediately close it
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
   menuPopup.classList.toggle('hidden');
   if (!menuPopup.classList.contains('hidden')) {
     updateZoomUI();          // ← refresh zoom % whenever menu opens
   }
 });
+
+// Prevent clicks inside the popup from bubbling to the document
+if (menuPopup) {
+  menuPopup.addEventListener('click', (e) => e.stopPropagation());
+}
+
+// Close when clicking anywhere outside the menu wrapper
+document.addEventListener('click', (e) => {
+  if (!menuPopup || menuPopup.classList.contains('hidden')) return;
+  if (menuWrapper && !menuWrapper.contains(e.target)) {
+    menuPopup.classList.add('hidden');
+  }
+});
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && menuPopup && !menuPopup.classList.contains('hidden')) {
+    menuPopup.classList.add('hidden');
+  }
+});
+
+// Also close when interacting with main content areas (covers webview clicks)
+const homeContainerEl = document.getElementById('home-container');
+if (webviewsEl) {
+  webviewsEl.addEventListener('pointerdown', () => {
+    if (!menuPopup.classList.contains('hidden')) menuPopup.classList.add('hidden');
+  });
+}
+if (homeContainerEl) {
+  homeContainerEl.addEventListener('pointerdown', () => {
+    if (!menuPopup.classList.contains('hidden')) menuPopup.classList.add('hidden');
+  });
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   // Initial boot
@@ -636,6 +678,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // Handle IPC messages from the static home webview (bookmarks navigation)
   const staticHome = document.getElementById('home-webview');
   if (staticHome) {
+  // Close menu when interacting with the home webview
+  attachCloseMenuOnInteract(staticHome);
     staticHome.addEventListener('ipc-message', (e) => {
       if (e.channel === 'navigate' && e.args[0]) {
         urlBox.value = e.args[0];
@@ -756,6 +800,19 @@ function updateZoomUI() {
 
 function zoomIn()  { ipcRenderer.invoke('zoom-in').then(updateZoomUI); }
 function zoomOut() { ipcRenderer.invoke('zoom-out').then(updateZoomUI); }
+
+// Utility: close the menu when interacting with a given element (e.g., webview)
+function attachCloseMenuOnInteract(el) {
+  if (!el) return;
+  const closeIfOpen = () => {
+    if (menuPopup && !menuPopup.classList.contains('hidden')) {
+      menuPopup.classList.add('hidden');
+    }
+  };
+  el.addEventListener('mousedown', closeIfOpen);
+  el.addEventListener('pointerdown', closeIfOpen);
+  el.addEventListener('focus', closeIfOpen, true);
+}
 
 // Attempt to load Node modules if available for context-menu actions
 let fs, remote;
