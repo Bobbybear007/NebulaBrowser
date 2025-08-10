@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, session, screen, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const PerformanceMonitor = require('./performance-monitor');
 const GPUFallback = require('./gpu-fallback');
 const GPUConfig = require('./gpu-config');
@@ -440,6 +441,32 @@ ipcMain.handle('apply-gpu-fallback', (event, level) => {
     return { success: true, level: level };
   } catch (err) {
     console.error('Error applying GPU fallback:', err);
+    return { error: err.message };
+  }
+});
+
+// About/info handler
+ipcMain.handle('get-about-info', () => {
+  try {
+    return {
+      appName: app.getName(),
+      appVersion: app.getVersion(),
+      isPackaged: app.isPackaged,
+      appPath: app.getAppPath(),
+      userDataPath: app.getPath('userData'),
+      electronVersion: process.versions.electron,
+      chromeVersion: process.versions.chrome,
+      nodeVersion: process.versions.node,
+      v8Version: process.versions.v8,
+      platform: process.platform,
+      arch: process.arch,
+      osType: os.type(),
+      osRelease: os.release(),
+      cpu: os.cpus()?.[0]?.model || 'Unknown CPU',
+      totalMemGB: Math.round((os.totalmem() / (1024 ** 3)) * 10) / 10,
+    };
+  } catch (err) {
+    console.error('Error building about info:', err);
     return { error: err.message };
   }
 });

@@ -137,3 +137,101 @@ function initTabs() {
 window.addEventListener('DOMContentLoaded', () => {
   initTabs();
 });
+
+// About tab population
+async function populateAbout() {
+  try {
+    const info = (window.aboutAPI && typeof window.aboutAPI.getInfo === 'function')
+      ? await window.aboutAPI.getInfo()
+      : null;
+    if (!info || info.error) {
+      console.warn('[ABOUT] Unable to load about info', info && info.error);
+      return;
+    }
+    const byId = (id) => document.getElementById(id);
+    byId('about-app-name').textContent = info.appName;
+    byId('about-app-version').textContent = info.appVersion;
+    byId('about-packaged').textContent = info.isPackaged ? 'Yes' : 'No';
+    byId('about-userdata').textContent = info.userDataPath;
+
+    byId('about-electron').textContent = info.electronVersion;
+    byId('about-chrome').textContent = info.chromeVersion;
+    byId('about-node').textContent = info.nodeVersion;
+    byId('about-v8').textContent = info.v8Version;
+
+    byId('about-os').textContent = `${info.osType} ${info.osRelease}`;
+    byId('about-cpu').textContent = info.cpu;
+    byId('about-arch').textContent = info.arch;
+    byId('about-mem').textContent = `${info.totalMemGB} GB`;
+
+    const copyBtn = document.getElementById('copy-about-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const payload = [
+          `Nebula ${info.appVersion} (${info.isPackaged ? 'packaged' : 'dev'})`,
+          `Electron ${info.electronVersion} | Chromium ${info.chromeVersion} | Node ${info.nodeVersion} | V8 ${info.v8Version}`,
+          `${info.osType} ${info.osRelease} ${info.arch}`,
+          `CPU: ${info.cpu}`,
+          `RAM: ${info.totalMemGB} GB`,
+          `UserData: ${info.userDataPath}`
+        ].join('\n');
+        try {
+          await navigator.clipboard.writeText(payload);
+          showStatus('Diagnostics copied');
+        } catch (err) {
+          console.error('Clipboard error:', err);
+          showStatus('Failed to copy diagnostics');
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[ABOUT] Error populating about info:', err);
+  }
+}
+
+// Populate about info after DOM is ready
+window.addEventListener('DOMContentLoaded', () => {
+  populateAbout();
+});
+
+// Keep settings open when clicking GitHub by asking host to open externally/new tab
+window.addEventListener('DOMContentLoaded', () => {
+  const gh = document.getElementById('github-link');
+  if (gh) {
+    gh.addEventListener('click', (e) => {
+      try {
+        e.preventDefault();
+        const url = gh.getAttribute('href');
+        if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+          window.electronAPI.sendToHost('navigate', url, { newTab: true });
+        } else if (window.parent) {
+          window.parent.postMessage({ type: 'navigate', url, newTab: true }, '*');
+        } else {
+          window.open(url, '_blank', 'noopener');
+        }
+      } catch (err) {
+        console.error('Failed to open GitHub link:', err);
+        window.open(gh.getAttribute('href'), '_blank');
+      }
+    });
+  }
+  const help = document.getElementById('help-link');
+  if (help) {
+    help.addEventListener('click', (e) => {
+      try {
+        e.preventDefault();
+        const url = help.getAttribute('href');
+        if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+          window.electronAPI.sendToHost('navigate', url, { newTab: true });
+        } else if (window.parent) {
+          window.parent.postMessage({ type: 'navigate', url, newTab: true }, '*');
+        } else {
+          window.open(url, '_blank', 'noopener');
+        }
+      } catch (err) {
+        console.error('Failed to open Help link:', err);
+        window.open(help.getAttribute('href'), '_blank');
+      }
+    });
+  }
+});

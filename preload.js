@@ -85,3 +85,8 @@ const bookmarksAPI = {
 // Expose APIs to main world
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 contextBridge.exposeInMainWorld('bookmarksAPI', bookmarksAPI);
+
+// Minimal about API for settings page
+contextBridge.exposeInMainWorld('aboutAPI', {
+  getInfo: () => ipcRenderer.invoke('get-about-info')
+});

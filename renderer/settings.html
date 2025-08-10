@@ -237,6 +237,36 @@
       background: var(--accent);
       border-radius: 8px;
     }
+
+    /* About actions */
+    .about-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  .github-btn, .help-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+  .github-btn:hover, .help-btn:hover {
+      background: var(--accent);
+    }
+  .github-btn svg, .help-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -437,8 +467,53 @@
       <!-- About Panel -->
       <section class="tab-panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about">
         <h2>About</h2>
-        <p class="note">Nebula Browser Experimental Settings</p>
-        <p class="note">Version info and links can go here.</p>
+        <div class="customization-group">
+          <h3>Application</h3>
+          <ul id="about-app">
+            <li><strong>Name:</strong> <span id="about-app-name">Loading...</span></li>
+            <li><strong>Version:</strong> <span id="about-app-version">Loading...</span></li>
+            <li><strong>Packaged:</strong> <span id="about-packaged">Loading...</span></li>
+            <li><strong>User data:</strong> <span id="about-userdata" style="word-break: break-all;">Loading...</span></li>
+          </ul>
+        </div>
+
+        <div class="customization-group">
+          <h3>Runtime</h3>
+          <ul id="about-runtime">
+            <li><strong>Electron:</strong> <span id="about-electron">Loading...</span></li>
+            <li><strong>Chromium:</strong> <span id="about-chrome">Loading...</span></li>
+            <li><strong>Node.js:</strong> <span id="about-node">Loading...</span></li>
+            <li><strong>V8:</strong> <span id="about-v8">Loading...</span></li>
+          </ul>
+        </div>
+
+        <div class="customization-group">
+          <h3>System</h3>
+          <ul id="about-system">
+            <li><strong>OS:</strong> <span id="about-os">Loading...</span></li>
+            <li><strong>CPU:</strong> <span id="about-cpu">Loading...</span></li>
+            <li><strong>Architecture:</strong> <span id="about-arch">Loading...</span></li>
+            <li><strong>Memory:</strong> <span id="about-mem">Loading...</span></li>
+          </ul>
+        </div>
+
+        <div class="customization-group about-actions">
+          <button id="copy-about-btn">Copy diagnostics</button>
+          <a id="github-link" href="https://github.com/Bobbybear007/NebulaBrowser" class="github-btn" rel="noopener noreferrer">
+            <!-- GitHub mark (Octicons) MIT License -->
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" role="img">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+            <span>GitHub</span>
+          </a>
+          <a id="help-link" href="https://nebula.zambazosmedia.group" class="help-btn" rel="noopener noreferrer">
+            <!-- Help icon -->
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" role="img">
+              <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 15a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 12 17zm-.02-1.9c-.6 0-1.02-.42-1.02-.98 0-1.97 2.76-1.95 2.76-3.62 0-.77-.66-1.4-1.72-1.4-1 0-1.67.5-2.06 1.22-.3.54-.95.73-1.45.44-.54-.31-.72-1-.42-1.53C7.7 7.7 9.06 6.5 12 6.5c2.26 0 3.98 1.3 3.98 3.35 0 2.74-2.96 2.77-3 3.83-.03.6-.43 1.02-1 1.02z"/>
+            </svg>
+            <span>Help</span>
+          </a>
+        </div>
       </section>
     </main>
   </div>
