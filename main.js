@@ -149,44 +149,39 @@ app.whenReady().then(async () => {
   });
 
   // Optimize session settings for performance and OAuth compatibility
-  const ses = session.defaultSession;
-  
+  const sessionsToConfigure = [session.fromPartition('persist:main'), session.defaultSession];
   try {
-    // Configure session for OAuth compatibility (Google, etc.)
-    ses.setPermissionRequestHandler((webContents, permission, callback) => {
-      // Allow necessary permissions for OAuth flows
-      if (['notifications', 'geolocation', 'camera', 'microphone'].includes(permission)) {
-        callback(false); // Deny by default for privacy
-      } else {
-        callback(true); // Allow others like storage access
-      }
-    });
+    for (const ses of sessionsToConfigure) {
+      // Configure session for OAuth compatibility (Google, etc.)
+      ses.setPermissionRequestHandler((webContents, permission, callback) => {
+        // Allow necessary permissions for OAuth flows
+        if (['notifications', 'geolocation', 'camera', 'microphone'].includes(permission)) {
+          callback(false); // Deny by default for privacy
+        } else {
+          callback(true); // Allow others like storage access
+        }
+      });
 
-    // Configure user agent for better compatibility
-    ses.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
-    
-    // Configure cookies for OAuth compatibility
-    ses.cookies.on('changed', (event, cookie, cause, removed) => {
-      // Log cookie changes for debugging OAuth issues
-      if (cookie.domain.includes('google') || cookie.domain.includes('accounts')) {
-        console.log(`Cookie ${removed ? 'removed' : 'added'}: ${cookie.name} for ${cookie.domain}`);
-      }
-    });
-    
-    // Enable request/response caching
-    ses.webRequest.onBeforeSendHeaders((details, callback) => {
-      // Add headers for better OAuth compatibility
-      details.requestHeaders['Cache-Control'] = 'max-age=3600';
-      // Ensure we accept third-party cookies for OAuth flows
-      details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
-      // Add referrer policy for OAuth compatibility
-      if (details.url.includes('accounts.google.com') || details.url.includes('oauth')) {
-        details.requestHeaders['Referrer-Policy'] = 'strict-origin-when-cross-origin';
-      }
-      callback({ requestHeaders: details.requestHeaders });
-    });
-    
-    // Skip preload registration as it's handled in window options
+      // Configure user agent for better compatibility
+      ses.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
+
+      // Configure cookies for OAuth compatibility
+      ses.cookies.on('changed', (event, cookie, cause, removed) => {
+        // Log cookie changes for debugging OAuth issues
+        if (cookie.domain && (cookie.domain.includes('google') || cookie.domain.includes('accounts'))) {
+          console.log(`Cookie ${removed ? 'removed' : 'added'}: ${cookie.name} for ${cookie.domain}`);
+        }
+      });
+
+      // Optional: add headers only for OAuth flows; avoid forcing cache headers globally
+      ses.webRequest.onBeforeSendHeaders((details, callback) => {
+        if (details.url.includes('accounts.google.com') || details.url.includes('oauth')) {
+          details.requestHeaders['Referrer-Policy'] = 'strict-origin-when-cross-origin';
+          details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+        }
+        callback({ requestHeaders: details.requestHeaders });
+      });
+    }
     console.log('Session configured successfully for OAuth compatibility');
   } catch (err) {
     console.error('Session setup error:', err);
@@ -330,30 +325,50 @@ ipcMain.handle('save-bookmarks', async (event, bookmarks) => {
 
 ipcMain.handle('clear-browser-data', async () => {
   try {
-    const ses = session.defaultSession;
+    const sessionsToClear = [session.defaultSession, session.fromPartition('persist:main')];
 
-    // Clear cookies
-    await ses.clearStorageData({ storages: ['cookies'] });
-
-    // Clear local storage and other storage data
-    await ses.clearStorageData({ storages: ['localstorage', 'indexdb', 'filesystem', 'websql'] });
-
-    // Clear cache
-    await ses.clearCache();
-
-    // Clear HTTP authentication cache
-    await ses.clearAuthCache();
-
-    // Clear all cookies explicitly to ensure logged-in accounts are logged out
-    const cookies = await ses.cookies.get({});
-    for (const cookie of cookies) {
-      await ses.cookies.remove(cookie.url, cookie.name);
+    for (const ses of sessionsToClear) {
+      if (!ses) continue;
+      // Clear all common site storage types
+      await ses.clearStorageData({
+        storages: [
+          'cookies',
+          'localstorage',
+          'indexdb',
+          'filesystem',
+          'websql',
+          'serviceworkers',
+          'caches',
+          'shadercache',
+          'appcache'
+        ],
+      });
+      // Clear caches and auth
+      await ses.clearCache();
+      await ses.clearAuthCache();
     }
+
+    // Also reset on-disk history JSON files managed by the app
+    const siteHistoryPath = path.join(__dirname, 'site-history.json');
+    const searchHistoryPath = path.join(__dirname, 'search-history.json');
+    try { await fs.promises.writeFile(siteHistoryPath, JSON.stringify([], null, 2)); } catch {}
+    try { await fs.promises.writeFile(searchHistoryPath, JSON.stringify([], null, 2)); } catch {}
 
     return true; // Indicate success
   } catch (error) {
     console.error('Failed to clear browser data:', error);
     return false; // Indicate failure
+  }
+});
+
+// Optional: standalone clear for search history JSON
+ipcMain.handle('clear-search-history', async () => {
+  const filePath = path.join(__dirname, 'search-history.json');
+  try {
+    await fs.promises.writeFile(filePath, JSON.stringify([], null, 2));
+    return true;
+  } catch (err) {
+    return false;
   }
 });
 

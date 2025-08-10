@@ -674,6 +674,30 @@ function reload() {
   }
 }
 
+function hardReload() {
+  const webview = document.getElementById(`tab-${activeTabId}`);
+  if (webview && typeof webview.reloadIgnoringCache === 'function') {
+    webview.reloadIgnoringCache();
+    scheduleUpdateNavButtons();
+  } else if (webview) {
+    // Fallback
+    webview.reload();
+  }
+}
+
+function freshReload() {
+  const webview = document.getElementById(`tab-${activeTabId}`);
+  if (!webview) return;
+  try {
+    const u = new URL(webview.getURL());
+    u.searchParams.set('_bust', Date.now().toString());
+    webview.src = u.toString();
+  } catch {
+    // If URL parsing fails (e.g., internal pages), fall back to hard reload
+    hardReload();
+  }
+}
+
 // Function to open the Settings page
 function openSettings() {
   createTab('browser://settings');
@@ -776,6 +800,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // only now bind the reload button (guaranteed to exist)
   const reloadBtn = document.getElementById('reload-btn');
   reloadBtn.addEventListener('click', reload);
+  const hardReloadBtn = document.getElementById('hard-reload-btn');
+  if (hardReloadBtn) hardReloadBtn.addEventListener('click', hardReload);
+  const freshReloadBtn = document.getElementById('fresh-reload-btn');
+  if (freshReloadBtn) freshReloadBtn.addEventListener('click', freshReload);
 
   // bind zoom buttons (single binding)
   const zoomInBtn = document.getElementById('zoom-in-btn');

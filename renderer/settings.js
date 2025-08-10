@@ -1,13 +1,7 @@
-// Try to get ipcRenderer, but don't fail if it's not available
-let ipcRenderer = null;
-try {
-  if (typeof require !== 'undefined') {
-    const electron = require('electron');
-    ipcRenderer = electron.ipcRenderer;
-  }
-} catch (e) {
-  console.log('[SETTINGS] Electron IPC not available, some features may be limited');
-}
+// Prefer contextBridge-exposed API
+const ipc = (window.electronAPI && typeof window.electronAPI.invoke === 'function')
+  ? window.electronAPI
+  : null;
 
 let clearBtn = document.getElementById('clear-data-btn');
 const statusDiv = document.getElementById('status');
@@ -39,14 +33,18 @@ function attachClearHandler(btn) {
   btn.onclick = async () => {
     if (statusDiv && statusText) {
       statusDiv.classList.remove('hidden');
-      statusText.textContent = 'Clearing all browser data...';
+      statusText.textContent = 'Clearing cookies, storage, cache, and history...';
     }
 
     try {
-      if (ipcRenderer) {
-        const ok = await ipcRenderer.invoke('clear-browser-data');
+      if (ipc) {
+        const ok = await ipc.invoke('clear-browser-data');
+        // Also clear localStorage site history in this context
+        try { localStorage.removeItem('siteHistory'); } catch {}
+        // Try to refresh lists if present
+        try { if (typeof loadHistories === 'function') await loadHistories(); } catch {}
         showStatus(ok
-          ? 'All browser data and bookmarks cleared!'
+          ? 'All browser data cleared.'
           : 'Failed to clear browser data.');
       } else {
         showStatus('Clear data feature not available in this context.');
@@ -69,6 +67,36 @@ window.addEventListener('DOMContentLoaded', () => {
   if (!clearBtn) {
     clearBtn = document.getElementById('clear-data-btn');
     attachClearHandler(clearBtn);
+  }
+
+  // Wire per-section clear buttons to main when possible
+  const clearSiteBtn = document.getElementById('clear-site-history-btn');
+  if (clearSiteBtn) {
+    clearSiteBtn.addEventListener('click', async () => {
+      try {
+        // Clear localStorage copy
+        try { localStorage.removeItem('siteHistory'); } catch {}
+        // Ask main to clear file-based history for consistency
+        if (ipc) { await ipc.invoke('clear-site-history'); }
+        showStatus('Site history cleared');
+        try { if (typeof loadHistories === 'function') await loadHistories(); } catch {}
+      } catch (e) {
+        console.error('Clear site history error:', e);
+        showStatus('Failed clearing site history');
+      }
+    });
+  }
+  const clearSearchBtn = document.getElementById('clear-search-history-btn');
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', async () => {
+      try {
+        if (ipc) { await ipc.invoke('clear-search-history'); }
+        showStatus('Search history cleared');
+      } catch (e) {
+        console.error('Clear search history error:', e);
+        showStatus('Failed clearing search history');
+      }
+    });
   }
 });
 
