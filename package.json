@@ -13,7 +13,8 @@
   "description": "",
   "devDependencies": {
     "electron": "^37.2.4",
-    "electron-builder": "^23.0.0"
+    "electron-builder": "^23.0.0",
+    "electron-nightly": "^39.0.0-nightly.20250811"
   },
   "build": {
     "appId": "com.andrewzambazos.nebula",

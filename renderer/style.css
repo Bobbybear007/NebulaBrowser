@@ -7,12 +7,20 @@ html, body {
   font-family: 'Segoe UI', sans-serif;
 }
 
+/* Global variables */
+:root {
+  /* Space reserved on the left for system window controls (traffic lights on macOS).
+     Applied cross-platform per request to keep a consistent layout. */
+  --window-controls-offset: 80px; /* adjust if needed */
+}
+
 /* TAB STRIP */
 #tab-bar {
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  padding: 2px 6px 0 6px; /* slimmer top padding */
+  /* Increase left padding to avoid overlap with OS window controls area */
+  padding: 2px 6px 0 var(--window-controls-offset);
   background: #1b1c20; /* strip background like modern browsers */
   border-bottom: 1px solid #2a2c33; /* hairline under tabs */
   overflow-x: auto; /* scroll when many tabs */
