@@ -170,7 +170,12 @@ function createTab(inputUrl) {
   webview.setAttribute('preload', '../preload.js');
   // Add attributes needed for Google OAuth and sign-in flows
   webview.setAttribute('webpreferences', 'allowRunningInsecureContent=false,javascript=true,webSecurity=true');
-  webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
+  try {
+    const baseUA = navigator.userAgent.includes('Nebula/') ? navigator.userAgent : navigator.userAgent + ' Nebula/1.0.0';
+    webview.setAttribute('useragent', baseUA);
+  } catch {
+    // fallback: let Electron supply default UA
+  }
 
   webview.addEventListener('page-favicon-updated', e => {
     if (e.favicons.length > 0) updateTabMetadata(id, 'favicon', e.favicons[0]);
@@ -194,6 +199,9 @@ function createTab(inputUrl) {
   webview.addEventListener('did-navigate', e => {
     handleNavigation(id, e.url);
     if (e.url.startsWith('http')) debug('[DEBUG] Recording navigation to:', e.url);
+    if (/\/cdn-cgi\//.test(e.url) || /challenge/i.test(e.url)) {
+      console.log('[Nebula] Cloudflare challenge detected at', e.url);
+    }
   });
   
   webview.addEventListener('did-navigate-in-page', e => {
@@ -208,8 +216,18 @@ function createTab(inputUrl) {
 
   // catch any target="_blank" or window.open() calls and open them as new tabs
   webview.addEventListener('new-window', e => {
-    e.preventDefault();
-    createTab(e.url);
+    // Allow auth / SSO popup windows (don't preventDefault) when target is http(s)
+    // so form POST + redirect chains stay intact. For simple links attempting to
+    // open a new tab, we create an in-app tab instead. Heuristic: if disposition
+    // is 'foreground-tab' or 'background-tab', treat as tab; otherwise allow popup.
+    if (e.url && (e.url.startsWith('http://') || e.url.startsWith('https://'))) {
+      if (e.disposition && e.disposition.includes('tab')) {
+        e.preventDefault();
+        createTab(e.url);
+      } // else let Electron create a real popup window
+    } else {
+      e.preventDefault();
+    }
   });
 
   // After creating dynamic webview:
@@ -332,7 +350,10 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   webview.setAttribute('preload', '../preload.js');
   // Add attributes needed for Google OAuth and sign-in flows
   webview.setAttribute('webpreferences', 'allowRunningInsecureContent=false,javascript=true,webSecurity=true');
-  webview.setAttribute('useragent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
+  try {
+    const baseUA2 = navigator.userAgent.includes('Nebula/') ? navigator.userAgent : navigator.userAgent + ' Nebula/1.0.0';
+    webview.setAttribute('useragent', baseUA2);
+  } catch {}
 
   // Add event listeners
   webview.addEventListener('did-fail-load', handleLoadFail(tabId));
@@ -343,6 +364,9 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
 
   webview.addEventListener('did-navigate', e => {
     handleNavigation(tabId, e.url);
+    if (/\/cdn-cgi\//.test(e.url) || /challenge/i.test(e.url)) {
+      console.log('[Nebula] Cloudflare challenge detected at', e.url);
+    }
   });
   webview.addEventListener('did-navigate-in-page', e => {
     handleNavigation(tabId, e.url);
@@ -352,7 +376,15 @@ function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   });
 
   webview.addEventListener('new-window', e => {
-    createTab(e.url);
+    if (e.url && (e.url.startsWith('http://') || e.url.startsWith('https://'))) {
+      if (e.disposition && e.disposition.includes('tab')) {
+        e.preventDefault();
+        createTab(e.url);
+      }
+      // otherwise allow popup for auth
+    } else {
+      e.preventDefault();
+    }
   });
 
   // After creating dynamic webview:

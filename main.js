@@ -82,29 +82,33 @@ function createWindow(startUrl) {
 
   const win = new BrowserWindow(windowOptions);
 
-  // Handle window.open() calls – load URL in this window
+  // Allow window.open() popups (e.g. OAuth / SSO / school portals) so that
+  // POST form submissions and opener relationships are preserved.
+  // We still restrict to http/https for safety; everything else is denied.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    win.loadURL(url);
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return { action: 'allow' };
+    }
     return { action: 'deny' };
   });
 
-  // Intercept direct navigations (e.g., user clicks a link) – load URL in this window
-  win.webContents.on('will-navigate', (event, url) => {
-    event.preventDefault(); // Prevent navigation in the current window
-    win.loadURL(url);
-  });
+  // IMPORTANT: Do NOT intercept 'will-navigate' with preventDefault() because
+  // that strips POST bodies (turning logins into GET requests). Let Chromium
+  // perform the navigation normally. If you need to observe navigations, add
+  // a listener without calling preventDefault().
+  // (Previous code here was causing login forms to fail.)
 
-  // Intercept legacy new-window events – load URL in this window
-  win.webContents.on('new-window', (event, url) => {
-    event.preventDefault(); // Prevent new Electron window
-    win.loadURL(url);
-  });
+  // Remove deprecated 'new-window' handler that forcibly loaded targets in the
+  // same window; this also broke some auth popup flows. setWindowOpenHandler
+  // above now governs popup behavior.
 
   // ensure all embedded <webview> tags behave predictably without heavy injections
   win.webContents.on('did-attach-webview', (event, webContents) => {
-    // Let the renderer/webview handle navigation; avoid extra JS injection that can stall
+    // Allow popups inside <webview> as well (required for some login flows)
     webContents.setWindowOpenHandler(({ url }) => {
-      webContents.loadURL(url);
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return { action: 'allow' };
+      }
       return { action: 'deny' };
     });
   });
@@ -162,8 +166,17 @@ app.whenReady().then(async () => {
         }
       });
 
-      // Configure user agent for better compatibility
-      ses.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0');
+      // Configure user agent for better compatibility:
+      // Previously this forced Chrome/120 which is stale and can cause anti-bot / Cloudflare challenges
+      // to fail due to UA / feature mismatch fingerprinting. Use the real Chromium UA then append branding.
+      try {
+        const realUA = ses.getUserAgent();
+        if (realUA && !realUA.includes('Nebula/')) {
+          ses.setUserAgent(realUA + ' Nebula/1.0.0');
+        }
+      } catch (e) {
+        console.warn('Failed to read real user agent, keeping default:', e);
+      }
 
       // Configure cookies for OAuth compatibility
       ses.cookies.on('changed', (event, cookie, cause, removed) => {
@@ -175,11 +188,17 @@ app.whenReady().then(async () => {
 
       // Optional: add headers only for OAuth flows; avoid forcing cache headers globally
       ses.webRequest.onBeforeSendHeaders((details, callback) => {
+        const headers = details.requestHeaders;
+        // Add richer headers for sensitive flows (OAuth / login) to look like a real browser
         if (details.url.includes('accounts.google.com') || details.url.includes('oauth')) {
-          details.requestHeaders['Referrer-Policy'] = 'strict-origin-when-cross-origin';
-          details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+          headers['Referrer-Policy'] = 'strict-origin-when-cross-origin';
+          headers['Accept'] = headers['Accept'] || 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
         }
-        callback({ requestHeaders: details.requestHeaders });
+        // Ensure Accept-Language is present (Cloudflare & some WAFs use this in heuristics)
+        if (!headers['Accept-Language'] && !headers['accept-language']) {
+          headers['Accept-Language'] = 'en-US,en;q=0.9';
+        }
+        callback({ requestHeaders: headers });
       });
     }
     console.log('Session configured successfully for OAuth compatibility');
