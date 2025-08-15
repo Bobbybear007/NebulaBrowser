@@ -28,13 +28,21 @@ ipcMain.removeHandler('window-close');
 
 
 function createWindow(startUrl) {
-  // Get the available screen size
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  // Capture high‑resolution startup timing markers
+  const perfMarks = { createWindow_called: performance.now() };
 
-  // Ensure nativeWindowOpen is disabled
+  // Get the available screen size (avoid full workArea allocation jank by starting slightly smaller then maximizing later if desired)
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const initialWidth = Math.min(width, Math.round(width * 0.9));
+  const initialHeight = Math.min(height, Math.round(height * 0.9));
+
+  // Window is created hidden; we only show after first meaningful paint to avoid OS‑level pointer jank while Chromium initializes
   let windowOptions = {
-    width,
-    height,
+    width: initialWidth,
+    height: initialHeight,
+    show: false,
+    useContentSize: true,
+    backgroundColor: '#121212', // avoids white flash & early extra paints
     resizable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -44,23 +52,24 @@ function createWindow(startUrl) {
       enableRemoteModule: false, // Deprecated and slow
       nodeIntegrationInSubFrames: false, // Security & performance
       nativeWindowOpen: false,
-      spellcheck: false, // Disable if not needed
+      spellcheck: false,
       webSecurity: true,
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
-      offscreen: false, // Ensure on-screen rendering for GPU
-      enableWebSQL: false, // Disable deprecated features
-      plugins: false, // Disable plugins that might interfere with GPU
+      offscreen: false,
+      enableWebSQL: false,
+      plugins: false,
+      backgroundThrottling: false, // keep UI responsive during early load
       // OAuth compatibility settings
       partition: 'persist:main',
-      sandbox: false // Allow full browser capabilities for OAuth
+      sandbox: false
     },
     fullscreen: false,
     autoHideMenuBar: true,
-    icon: process.platform === 'darwin' 
+    icon: process.platform === 'darwin'
       ? path.join(__dirname, 'assets/images/Logos/Nebula-Favicon.icns')
       : path.join(__dirname, 'assets/images/Logos/Nebula-favicon.png'),
-    title: 'Nebula',
+    title: 'Nebula'
   };
 
   if (process.platform === 'darwin') {
@@ -81,6 +90,7 @@ function createWindow(startUrl) {
   }
 
   const win = new BrowserWindow(windowOptions);
+  perfMarks.browserWindow_instantiated = performance.now();
 
   // Allow window.open() popups (e.g. OAuth / SSO / school portals) so that
   // POST form submissions and opener relationships are preserved.
@@ -114,6 +124,7 @@ function createWindow(startUrl) {
   });
 
   win.loadFile('renderer/index.html');
+  perfMarks.loadFile_issued = performance.now();
 
   // if caller passed in a URL, forward it to the renderer after load
   if (startUrl) {
@@ -125,50 +136,64 @@ function createWindow(startUrl) {
   // Set default zoom to 100%
   const zoomFactor = 1.0;
   const loadStartTime = Date.now();
+  // Show window ASAP after first paint for perceived performance
+  let shown = false;
+  const showNow = (reason) => {
+    if (shown) return;
+    shown = true;
+    win.show();
+    if (process.platform === 'win32') {
+      // Defer maximize to next frame to avoid large-surface first paint cost
+      setTimeout(() => {
+        try { win.maximize(); } catch {}
+      }, 16);
+    }
+    console.log(`[Startup] Window shown (${reason}) in ${(performance.now() - perfMarks.createWindow_called).toFixed(1)}ms`);
+  };
+
+  win.webContents.once('ready-to-show', () => showNow('ready-to-show'));
+  // Fallback in case ready-to-show is delayed
+  setTimeout(() => showNow('timeout-fallback'), 4000);
+
   win.webContents.on('did-finish-load', () => {
     win.webContents.setZoomFactor(zoomFactor);
-    
-    // Track load time for performance monitoring
     const loadTime = Date.now() - loadStartTime;
     perfMonitor.trackLoadTime(win.webContents.getURL(), loadTime);
+    perfMarks.did_finish_load = performance.now();
+
+    // Defer heavier, non‑critical tasks to next idle slice to keep UI smooth
+    setTimeout(() => {
+      // Kick off GPU status check here (was earlier) to avoid competing with first paint
+      gpuConfig.checkGPUStatus()
+        .then(gpuStatus => {
+          console.log('[Deferred] GPU Configuration Results:');
+          console.log('- GPU Status:', gpuStatus);
+          console.log('- Recommendations:', gpuConfig.getRecommendations());
+        })
+        .catch(err => console.error('[Deferred] GPU status check failed:', err));
+
+      // Start performance monitoring after initial load
+      perfMonitor.start();
+    }, 300);
   });
 
   // Renderer manages history; no main-process recording here
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(async () => {
-  // Check GPU status and handle errors
-  const gpuStatus = await gpuConfig.checkGPUStatus();
-  console.log('GPU Configuration Results:');
-  console.log('- GPU Status:', gpuStatus);
-  console.log('- Recommendations:', gpuConfig.getRecommendations());
-  
-  // Handle GPU process crashes
-  app.on('gpu-process-crashed', (event, killed) => {
-    console.warn('GPU process crashed, killed:', killed);
-    if (!killed) {
-      console.log('Attempting to recover GPU process...');
-    }
-  });
-
-  // Optimize session settings for performance and OAuth compatibility
+// Configure sessions asynchronously (non-blocking for window creation)
+function configureSessionsAsync() {
   const sessionsToConfigure = [session.fromPartition('persist:main'), session.defaultSession];
   try {
     for (const ses of sessionsToConfigure) {
-      // Configure session for OAuth compatibility (Google, etc.)
+      if (!ses) continue;
       ses.setPermissionRequestHandler((webContents, permission, callback) => {
-        // Allow necessary permissions for OAuth flows
         if (['notifications', 'geolocation', 'camera', 'microphone'].includes(permission)) {
-          callback(false); // Deny by default for privacy
+          callback(false);
         } else {
-          callback(true); // Allow others like storage access
+          callback(true);
         }
       });
-
-      // Configure user agent for better compatibility:
-      // Previously this forced Chrome/120 which is stale and can cause anti-bot / Cloudflare challenges
-      // to fail due to UA / feature mismatch fingerprinting. Use the real Chromium UA then append branding.
       try {
         const realUA = ses.getUserAgent();
         if (realUA && !realUA.includes('Nebula/')) {
@@ -177,24 +202,17 @@ app.whenReady().then(async () => {
       } catch (e) {
         console.warn('Failed to read real user agent, keeping default:', e);
       }
-
-      // Configure cookies for OAuth compatibility
       ses.cookies.on('changed', (event, cookie, cause, removed) => {
-        // Log cookie changes for debugging OAuth issues
         if (cookie.domain && (cookie.domain.includes('google') || cookie.domain.includes('accounts'))) {
           console.log(`Cookie ${removed ? 'removed' : 'added'}: ${cookie.name} for ${cookie.domain}`);
         }
       });
-
-      // Optional: add headers only for OAuth flows; avoid forcing cache headers globally
       ses.webRequest.onBeforeSendHeaders((details, callback) => {
         const headers = details.requestHeaders;
-        // Add richer headers for sensitive flows (OAuth / login) to look like a real browser
         if (details.url.includes('accounts.google.com') || details.url.includes('oauth')) {
           headers['Referrer-Policy'] = 'strict-origin-when-cross-origin';
           headers['Accept'] = headers['Accept'] || 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
         }
-        // Ensure Accept-Language is present (Cloudflare & some WAFs use this in heuristics)
         if (!headers['Accept-Language'] && !headers['accept-language']) {
           headers['Accept-Language'] = 'en-US,en;q=0.9';
         }
@@ -205,13 +223,25 @@ app.whenReady().then(async () => {
   } catch (err) {
     console.error('Session setup error:', err);
   }
-  
-  // Start performance monitoring
-  perfMonitor.start();
-  
+}
+
+app.whenReady().then(() => {
+  const t0 = performance.now();
   createWindow();
+  console.log('[Startup] createWindow invoked in', (performance.now() - t0).toFixed(1), 'ms after app.whenReady');
+
+  // Handle GPU process crashes (still register early)
+  app.on('gpu-process-crashed', (event, killed) => {
+    console.warn('GPU process crashed, killed:', killed);
+    if (!killed) {
+      console.log('Attempting to recover GPU process...');
+    }
+  });
+
+  // Defer session configuration to microtask/next tick (already inexpensive) – keep explicit
+  setImmediate(configureSessionsAsync);
+
   if (process.platform === 'darwin') {
-    // Set macOS dock icon using an icns file for proper display.
     app.dock.setIcon(path.join(__dirname, 'assets/images/Logos/Nebula-Icon.icns'));
   }
   app.on('activate', () => {
