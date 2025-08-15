@@ -36,9 +36,7 @@ const urlBox       = document.getElementById('url');
 const tabBarEl     = document.getElementById('tab-bar');
 const webviewsEl   = document.getElementById('webviews');
 const menuPopup    = document.getElementById('menu-popup');
-const contextMenu  = document.getElementById('context-menu');
-const menuItems    = contextMenu ? contextMenu.querySelectorAll('li') : [];
-let lastContextPos = { x: 0, y: 0 };
+// (Removed old custom HTML context menu in favor of native Electron menu)
 
 // Select all text on focus and prevent mouseup from deselecting
 urlBox.addEventListener('focus', () => {
@@ -997,55 +995,33 @@ try {
   console.warn('fs or remote modules unavailable in renderer:', err);
 }
 
-// 4) unify context-menu wiring
-function showContextMenu(x,y) {
-  if (!contextMenu) return;
-  lastContextPos = { x, y };
-  contextMenu.style.top = `${y}px`;
-  contextMenu.style.left = `${x}px`;
-  contextMenu.classList.add('visible');
-}
-document.addEventListener('contextmenu', e => {
-  if (e.target.tagName==='WEBVIEW' || e.composedPath().some(el=>el.id==='webviews')) {
-    e.preventDefault();
-    showContextMenu(e.clientX, e.clientY);
+// Native context menu: delegate to main via preload API
+document.addEventListener('contextmenu', (e) => {
+  // Determine if inside a webview or general renderer area
+  const inWebviewArea = e.target.tagName === 'WEBVIEW' || e.composedPath().some(el => el.id === 'webviews');
+  if (!inWebviewArea) return; // Let default OS menu appear in text inputs etc. if desired
+  e.preventDefault();
+
+  // Try to extract link/image/selection info (limited for <webview>, better done inside page but sandboxed)
+  const selection = window.getSelection()?.toString() || '';
+  window.electronAPI?.showContextMenu({
+    clientX: e.clientX,
+    clientY: e.clientY,
+    selectionText: selection,
+    isEditable: false
+  });
+});
+
+// Handle commands from main process triggered by context menu
+window.addEventListener('nebula-context-command', (e) => {
+  const { cmd, url } = e.detail || {};
+  if (!cmd) return;
+  switch (cmd) {
+    case 'open-link-new-tab':
+      if (url) createTab(url);
+      break;
+    case 'open-image-new-tab':
+      if (url) createTab(url);
+      break;
   }
 });
-document.addEventListener('click', ()=> contextMenu && contextMenu.classList.remove('visible'));
-if (remote && fs) {
-  menuItems.forEach(item => item.addEventListener('click', async evt => {
-    const action = item.dataset.action;
-    const win    = remote.getCurrentWindow();
-
-    switch (action) {
-      case 'save-page': {
-        const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'page.html' });
-        if (!canceled && filePath) win.webContents.savePage(filePath, 'HTMLComplete');
-        break;
-      }
-      case 'select-all':
-        document.execCommand('selectAll');
-        break;
-      case 'screenshot': {
-        const image = await win.webContents.capturePage();
-        const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'screenshot.png' });
-        if (!canceled && filePath) fs.writeFileSync(filePath, image.toPNG());
-        break;
-      }
-      case 'view-source': {
-        const html = document.documentElement.outerHTML;
-        const { canceled, filePath } = await remote.dialog.showSaveDialog(win, { defaultPath: 'source.html' });
-        if (!canceled && filePath) fs.writeFileSync(filePath, html);
-        break;
-      }
-      case 'inspect-accessibility':
-        win.webContents.inspectAccessibilityNode(lastContextPos.x, lastContextPos.y);
-        break;
-      case 'inspect-element':
-        win.webContents.inspectElement(lastContextPos.x, lastContextPos.y);
-        break;
-    }
-
-    contextMenu.classList.remove('visible');
-  }));
-}

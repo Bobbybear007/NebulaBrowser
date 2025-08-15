@@ -63,6 +63,13 @@ const electronAPI = {
       console.error('IPC openLocalFile error:', err);
       return null;
     }
+  },
+  showContextMenu: (params) => {
+    try {
+      return ipcRenderer.invoke('show-context-menu', params);
+    } catch (err) {
+      console.error('IPC showContextMenu error:', err);
+    }
   }
 };
 
@@ -105,4 +112,9 @@ contextBridge.exposeInMainWorld('bookmarksAPI', bookmarksAPI);
 // Minimal about API for settings page
 contextBridge.exposeInMainWorld('aboutAPI', {
   getInfo: () => ipcRenderer.invoke('get-about-info')
+});
+
+// Relay context-menu commands from main to active renderer context (open new tabs etc.)
+ipcRenderer.on('context-menu-command', (event, payload) => {
+  window.dispatchEvent(new CustomEvent('nebula-context-command', { detail: payload }));
 });

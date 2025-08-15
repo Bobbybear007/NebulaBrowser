@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, screen, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, session, screen, shell, dialog, Menu, clipboard } = require('electron');
 const { pathToFileURL } = require('url');
 const fs = require('fs');
 const path = require('path');
@@ -611,4 +611,80 @@ ipcMain.handle('show-open-file-dialog', async () => {
     console.error('open-file dialog failed:', err);
     return null;
   }
+});
+
+// Helper to build and show a native context menu for a given webContents + params
+function buildAndShowContextMenu(sender, params = {}) {
+  try {
+    const embedder = sender.hostWebContents || sender;
+    const template = [];
+
+    template.push(
+      { label: 'Back', enabled: sender.canGoBack?.(), click: () => { try { sender.goBack(); } catch {} } },
+      { label: 'Forward', enabled: sender.canGoForward?.(), click: () => { try { sender.goForward(); } catch {} } },
+      { label: 'Reload', click: () => { try { sender.reload(); } catch {} } },
+      { type: 'separator' }
+    );
+
+    // Link actions
+    const linkURL = params.linkURL && params.linkURL.startsWith('http') ? params.linkURL : undefined;
+    if (linkURL) {
+      template.push(
+        { label: 'Open Link in New Tab', click: () => embedder.send('context-menu-command', { cmd: 'open-link-new-tab', url: linkURL }) },
+        { label: 'Open Link Externally', click: () => shell.openExternal(linkURL).catch(()=>{}) },
+        { label: 'Copy Link Address', click: () => clipboard.writeText(linkURL) },
+        { type: 'separator' }
+      );
+    }
+
+    // Image actions
+    const imageURL = (params.mediaType === 'image' && params.srcURL) ? params.srcURL : (params.imgURL || undefined);
+    if (imageURL) {
+      template.push(
+        { label: 'Open Image in New Tab', click: () => embedder.send('context-menu-command', { cmd: 'open-image-new-tab', url: imageURL }) },
+        { label: 'Copy Image Address', click: () => clipboard.writeText(imageURL) },
+        { type: 'separator' }
+      );
+    }
+
+    // Text / editable
+    if (params.isEditable) {
+      template.push(
+        { label: 'Undo', role: 'undo' },
+        { label: 'Redo', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cut', role: 'cut' },
+        { label: 'Copy', role: 'copy' },
+        { label: 'Paste', role: 'paste' },
+        { label: 'Select All', role: 'selectAll' },
+        { type: 'separator' }
+      );
+    } else if (params.selectionText) {
+      template.push(
+        { label: 'Copy', role: 'copy' },
+        { label: 'Select All', role: 'selectAll' },
+        { type: 'separator' }
+      );
+    }
+
+    template.push({ label: 'Inspect Element', click: () => { try { sender.inspectElement(params.x ?? params.clientX, params.y ?? params.clientY); } catch {} } });
+
+    const menu = Menu.buildFromTemplate(template);
+    const win = BrowserWindow.fromWebContents(embedder);
+    if (win) menu.popup({ window: win });
+  } catch (err) {
+    console.error('Failed to build context menu:', err);
+  }
+}
+
+// IPC trigger (legacy / renderer-requested)
+ipcMain.handle('show-context-menu', (event, params = {}) => {
+  buildAndShowContextMenu(event.sender, params);
+});
+
+// Automatic native context menu for any webContents (windows + webviews)
+app.on('web-contents-created', (event, contents) => {
+  contents.on('context-menu', (e, params) => {
+    buildAndShowContextMenu(contents, params);
+  });
 });
