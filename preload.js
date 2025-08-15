@@ -55,6 +55,14 @@ const electronAPI = {
       console.error('IPC open-devtools error:', err);
       return Promise.reject(err);
     }
+  },
+  openLocalFile: async () => {
+    try {
+      return await ipcRenderer.invoke('show-open-file-dialog');
+    } catch (err) {
+      console.error('IPC openLocalFile error:', err);
+      return null;
+    }
   }
 };
 

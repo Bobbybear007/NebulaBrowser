@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, session, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, session, screen, shell, dialog } = require('electron');
+const { pathToFileURL } = require('url');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -547,4 +548,30 @@ ipcMain.handle('open-devtools', (event) => {
   contents.openDevTools({ mode: 'bottom' });
   }
   return contents.isDevToolsOpened();
+});
+
+// Open local file dialog -> returns file:// URL (or null if cancelled)
+ipcMain.handle('show-open-file-dialog', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'HTML Files', extensions: ['html', 'htm', 'xhtml'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (result.canceled || !result.filePaths || !result.filePaths.length) return null;
+    const filePath = result.filePaths[0];
+    try {
+      return pathToFileURL(filePath).href;
+    } catch {
+      // Fallback manual conversion
+      let p = filePath.replace(/\\/g, '/');
+      if (!p.startsWith('/')) p = '/' + p; // ensure leading slash for drive letters
+      return 'file://' + (p.startsWith('/') ? '/' : '') + p; // double slash safety
+    }
+  } catch (err) {
+    console.error('open-file dialog failed:', err);
+    return null;
+  }
 });

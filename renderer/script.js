@@ -295,16 +295,43 @@ function updateTabMetadata(id, key, value) {
 }
 
 function navigate() {
-  const input = urlBox.value.trim();
+  const rawInput = urlBox.value.trim();
+  // Strip surrounding single or double quotes (common when copying paths)
+  let input = rawInput;
+  if ((input.startsWith('"') && input.endsWith('"')) || (input.startsWith("'") && input.endsWith("'"))) {
+    input = input.slice(1, -1);
+  }
+  // If we modified input (removed quotes), reflect it back in the UI for clarity
+  if (input !== rawInput) {
+    urlBox.value = input;
+  }
   const tab = tabs.find(t => t.id === activeTabId);
   if (!tab) return;
 
   // decide if this is a search query or a URL/internal page
   const hasProtocol = /^https?:\/\//i.test(input);
+  const isFileProtocol = /^file:\/\//i.test(input);
+  const looksLikeLocalPath = /^(?:[A-Za-z]:\\|\\\\|\/?)[^?]*\.(?:x?html?)$/i.test(input);
   const isInternal = input.startsWith('browser://');
   const isLikelyUrl = hasProtocol || input.includes('.');
   let resolved;
-  if (!isInternal && !isLikelyUrl) {
+  if (isFileProtocol) {
+    resolved = input; // Electron will load file:// directly in <webview>
+  } else if (looksLikeLocalPath) {
+    // Convert Windows or *nix style path to file:// URL
+    let p = input;
+    // Expand backslashes
+    p = p.replace(/\\/g, '/');
+    // If it starts with a drive letter like C:/ ensure single leading slash
+    if (/^[A-Za-z]:\//.test(p)) {
+      resolved = 'file:///' + encodeURI(p);
+    } else if (p.startsWith('/')) {
+      resolved = 'file://' + encodeURI(p); // already absolute
+    } else {
+      // relative path relative to app root (renderer directory)
+      resolved = 'file://' + encodeURI(p); // fallback; treat as relative from working dir
+    }
+  } else if (!isInternal && !isLikelyUrl) {
     resolved = `https://www.google.com/search?q=${encodeURIComponent(input)}`;
   } else {
     resolved = resolveInternalUrl(input);
@@ -333,6 +360,21 @@ function navigate() {
   scheduleRenderTabs();
   scheduleUpdateNavButtons();
 }
+
+// Keyboard shortcut: Ctrl+O (Cmd+O on mac) to open a local file
+document.addEventListener('keydown', async (e) => {
+  const isAccel = (navigator.platform.includes('Mac') ? e.metaKey : e.ctrlKey);
+  if (isAccel && e.key.toLowerCase() === 'o') {
+    e.preventDefault();
+    if (window.electronAPI && window.electronAPI.openLocalFile) {
+      const fileUrl = await window.electronAPI.openLocalFile();
+      if (fileUrl) {
+        urlBox.value = fileUrl;
+        navigate();
+      }
+    }
+  }
+});
 
 function convertHomeTabToWebview(tabId, inputUrl, resolvedUrl) {
   const tab = tabs.find(t => t.id === tabId);
