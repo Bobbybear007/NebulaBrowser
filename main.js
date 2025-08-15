@@ -18,6 +18,33 @@ gpuConfig.configure();
 // Set a custom application name
 app.setName('Nebula');
 
+// --- Custom User Agent (hide Electron token & brand as Nebula) ---
+// Many sites rely on UA sniffing. Default Electron UA contains 'Electron/x.y.z' which
+// makes detection sites label the app as an Electron application. We construct a
+// Chrome‑compatible UA string without the Electron token, appending a Nebula marker.
+// NOTE: Keep the Chrome and Safari tokens for maximum compatibility.
+// If you ever need to temporarily reveal Electron for debugging, set NEBULA_DEBUG_ELECTRON_UA=1.
+const chromeVersion = process.versions.chrome; // matches bundled Chromium
+const nebulaVersion = app.getVersion();
+function computeBaseUA() {
+  let platformPart;
+  if (process.platform === 'win32') {
+    // Use generic Windows 10 token; detailed build numbers rarely needed and can cause UA entropy issues.
+    platformPart = 'Windows NT 10.0; Win64; x64';
+  } else if (process.platform === 'darwin') {
+    // A neutral modern macOS token; avoid exposing real minor version for stability.
+    platformPart = 'Macintosh; Intel Mac OS X 10_15_7';
+  } else {
+    platformPart = 'X11; Linux x86_64';
+  }
+  return `Mozilla/5.0 (${platformPart}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36 Nebula/${nebulaVersion}`;
+}
+
+if (!process.env.NEBULA_DEBUG_ELECTRON_UA) {
+  // Set a fallback UA so any new sessions inherit it automatically.
+  try { app.userAgentFallback = computeBaseUA(); } catch {}
+}
+
 // Setup GPU crash handling
 gpuFallback.setupCrashHandling();
 
@@ -196,9 +223,19 @@ function configureSessionsAsync() {
         }
       });
       try {
-        const realUA = ses.getUserAgent();
-        if (realUA && !realUA.includes('Nebula/')) {
-          ses.setUserAgent(realUA + ' Nebula/1.0.0');
+        let realUA = ses.getUserAgent();
+        // If Electron token present and we're not in debug mode, recompute using base builder.
+        if (!process.env.NEBULA_DEBUG_ELECTRON_UA) {
+          const hasElectron = /Electron\//i.test(realUA);
+          if (hasElectron || !/Nebula\//.test(realUA)) {
+            realUA = app.userAgentFallback || computeBaseUA();
+            ses.setUserAgent(realUA);
+          }
+        } else {
+          // Debug mode: just append Nebula tag if missing (keeps Electron segment visible)
+            if (realUA && !/Nebula\//.test(realUA)) {
+              ses.setUserAgent(realUA + ' Nebula/' + app.getVersion());
+            }
         }
       } catch (e) {
         console.warn('Failed to read real user agent, keeping default:', e);
