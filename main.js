@@ -534,3 +534,17 @@ ipcMain.handle('get-about-info', () => {
     return { error: err.message };
   }
 });
+
+// Toggle DevTools for the requesting window (main window webContents)
+ipcMain.handle('open-devtools', (event) => {
+  const wc = BrowserWindow.fromWebContents(event.sender);
+  if (!wc) return false;
+  const contents = wc.webContents;
+  if (contents.isDevToolsOpened()) {
+    contents.closeDevTools();
+  } else {
+  // Open docked inside the main window (bottom). Other options: 'right', 'undocked', 'detach'
+  contents.openDevTools({ mode: 'bottom' });
+  }
+  return contents.isDevToolsOpened();
+});

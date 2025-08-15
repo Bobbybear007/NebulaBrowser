@@ -843,6 +843,14 @@ window.addEventListener('DOMContentLoaded', () => {
   zoomInBtn.addEventListener('click', zoomIn);
   zoomOutBtn.addEventListener('click', zoomOut);
 
+  // DevTools toggle button
+  const devtoolsBtn = document.getElementById('devtools-btn');
+  if (devtoolsBtn && window.electronAPI && window.electronAPI.toggleDevTools) {
+    devtoolsBtn.addEventListener('click', () => {
+      window.electronAPI.toggleDevTools();
+    });
+  }
+
   // wire up back/forward buttons
   const backBtn = document.querySelector('.nav-left button:nth-child(1)');
   const forwardBtn = document.querySelector('.nav-left button:nth-child(2)');
@@ -898,6 +906,17 @@ window.addEventListener('DOMContentLoaded', () => {
   //   bookmarks = bs;
   //   console.log('[DEBUG] Loaded bookmarks:', bookmarks);
   // });
+});
+
+// Global keyboard shortcut for DevTools (Ctrl+Shift+I or F12)
+document.addEventListener('keydown', (e) => {
+  const isMod = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i');
+  if (isMod || e.key === 'F12') {
+    if (window.electronAPI && window.electronAPI.toggleDevTools) {
+      window.electronAPI.toggleDevTools();
+      e.preventDefault();
+    }
+  }
 });
 
 // zoom helpers

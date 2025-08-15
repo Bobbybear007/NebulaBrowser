@@ -47,6 +47,14 @@ const electronAPI = {
     } catch (err) {
       console.error('IPC removeListener error:', err);
     }
+  },
+  toggleDevTools: () => {
+    try {
+      return ipcRenderer.invoke('open-devtools');
+    } catch (err) {
+      console.error('IPC open-devtools error:', err);
+      return Promise.reject(err);
+    }
   }
 };
 
