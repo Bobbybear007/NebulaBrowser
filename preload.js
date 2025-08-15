@@ -70,7 +70,9 @@ const electronAPI = {
     } catch (err) {
       console.error('IPC showContextMenu error:', err);
     }
-  }
+  },
+  saveImageToDisk: async (suggestedName, dataUrl) => ipcRenderer.invoke('save-image-from-dataurl', { suggestedName, dataUrl }),
+  saveImageFromNet: async (url) => ipcRenderer.invoke('save-image-from-url', { url })
 };
 
 // Cache for bookmarks to reduce IPC calls

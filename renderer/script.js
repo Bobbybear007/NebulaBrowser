@@ -87,6 +87,9 @@ function getTabLabel(tab) {
   if (tab.title && tab.title !== 'New Tab') return tab.title;
   const u = tab.url || '';
   try {
+  if (u.startsWith('data:image')) return 'Image';
+  if (u.startsWith('data:')) return 'Data';
+  if (u.startsWith('blob:')) return 'Resource';
     if (u.startsWith('http')) return new URL(u).hostname;
     if (u.startsWith('browser://')) return u.replace('browser://', '');
     return u || 'New Tab';
@@ -156,7 +159,17 @@ function createTab(inputUrl) {
   }
   
   // For all other URLs, use webview
-  const resolvedUrl = resolveInternalUrl(inputUrl);
+  let resolvedUrl = resolveInternalUrl(inputUrl);
+  // If it's a raw data: URL (image) keep as is; blob: will only resolve within its origin context (may fail)
+  // For very long data URLs we could embed them in a minimal viewer page for cleaner rendering.
+  if (resolvedUrl.startsWith('data:') && resolvedUrl.length > 4096) {
+    // Create a simple object URL page to avoid huge URL in the address bar (cannot easily persist across restarts).
+    const html = `<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;">`+
+      `<img src="${resolvedUrl}" style="max-width:100%;max-height:100%;object-fit:contain;"/>`+
+      `</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    resolvedUrl = URL.createObjectURL(blob);
+  }
   debug('[DEBUG] createTab() resolvedUrl =', resolvedUrl);
 
   const webview = document.createElement('webview');
@@ -271,7 +284,9 @@ function resolveInternalUrl(url) {
     if (allowedInternalPages.includes(page)) return `${page}.html`;
     else return '404.html';
   }
-  return url.startsWith('http') ? url : `https://${url}`;
+  // Allow direct loading of common schemes without forcing https://
+  if (/^(https?:|file:|data:|blob:)/i.test(url)) return url;
+  return `https://${url}`;
 }
 
 
@@ -1022,6 +1037,25 @@ window.addEventListener('nebula-context-command', (e) => {
       break;
     case 'open-image-new-tab':
       if (url) createTab(url);
+      break;
+    case 'save-image':
+      if (!url) return;
+      // Try direct network save first (http/file/data)
+      if (/^(https?:|file:|data:)/i.test(url)) {
+        window.electronAPI.saveImageFromNet(url);
+        return;
+      }
+      // For blob: URLs we need to resolve inside the active webview by converting to dataURL
+      if (url.startsWith('blob:')) {
+        const webview = document.getElementById(`tab-${activeTabId}`);
+        if (webview) {
+          webview.executeJavaScript(`(async()=>{try{const r=await fetch('${url}');const b=await r.blob();return new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b);});}catch(e){return null;}})();`).then(dataUrl=>{
+            if (dataUrl) {
+              window.electronAPI.saveImageToDisk('image', dataUrl);
+            }
+          });
+        }
+      }
       break;
   }
 });

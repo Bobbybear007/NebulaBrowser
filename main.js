@@ -643,6 +643,7 @@ function buildAndShowContextMenu(sender, params = {}) {
       template.push(
         { label: 'Open Image in New Tab', click: () => embedder.send('context-menu-command', { cmd: 'open-image-new-tab', url: imageURL }) },
         { label: 'Copy Image Address', click: () => clipboard.writeText(imageURL) },
+  { label: 'Save Image As...', click: () => embedder.send('context-menu-command', { cmd: 'save-image', url: imageURL, mime: params.mediaType === 'image' ? params.mimeType : undefined }) },
         { type: 'separator' }
       );
     }
@@ -687,4 +688,60 @@ app.on('web-contents-created', (event, contents) => {
   contents.on('context-menu', (e, params) => {
     buildAndShowContextMenu(contents, params);
   });
+});
+
+// --- Image save handlers ---
+ipcMain.handle('save-image-from-dataurl', async (event, { suggestedName = 'image', dataUrl }) => {
+  try {
+    if (!dataUrl || !dataUrl.startsWith('data:')) return false;
+    const match = /^data:(.*?);base64,(.*)$/.exec(dataUrl);
+    if (!match) return false;
+    const mime = match[1] || 'application/octet-stream';
+    const ext = (mime.split('/')[1] || 'png').split(';')[0];
+    const buf = Buffer.from(match[2], 'base64');
+    const win = BrowserWindow.fromWebContents(event.sender.hostWebContents || event.sender);
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `${suggestedName}.${ext}` });
+    if (canceled || !filePath) return false;
+    await fs.promises.writeFile(filePath, buf);
+    return true;
+  } catch (err) {
+    console.error('save-image-from-dataurl failed:', err);
+    return false;
+  }
+});
+
+ipcMain.handle('save-image-from-url', async (event, { url }) => {
+  if (!url) return false;
+  const win = BrowserWindow.fromWebContents(event.sender.hostWebContents || event.sender);
+  try {
+    let dataBuf;
+    if (url.startsWith('http')) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const arrayBuf = await res.arrayBuffer();
+      dataBuf = Buffer.from(arrayBuf);
+      const ctype = res.headers.get('content-type') || 'application/octet-stream';
+      const ext = (ctype.split('/')[1] || 'png').split(';')[0];
+      const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `image.${ext}` });
+      if (canceled || !filePath) return false;
+      await fs.promises.writeFile(filePath, dataBuf);
+      return true;
+    } else if (url.startsWith('data:')) {
+      // Forward to dataURL handler path – easier to keep logic single
+      return ipcMain.emit('save-image-from-dataurl', event, { dataUrl: url });
+    } else if (url.startsWith('file:')) {
+      // Copy file to chosen destination
+      const filePathSrc = new URL(url).pathname.replace(/^\//, '');
+      const base = path.basename(filePathSrc);
+      const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: base });
+      if (canceled || !filePath) return false;
+      await fs.promises.copyFile(filePathSrc, filePath);
+      return true;
+    } else {
+      return false;
+    }
+  } catch (err) {
+    console.error('save-image-from-url failed:', err);
+    return false;
+  }
 });
