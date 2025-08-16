@@ -668,7 +668,35 @@ function buildAndShowContextMenu(sender, params = {}) {
       );
     }
 
-    template.push({ label: 'Inspect Element', click: () => { try { sender.inspectElement(params.x ?? params.clientX, params.y ?? params.clientY); } catch {} } });
+    template.push({
+      label: 'Inspect Element',
+      click: () => {
+        try {
+          // Use the main window's webContents for DevTools
+          const mainWin = BrowserWindow.fromWebContents(sender.hostWebContents || sender);
+          const mainWC = mainWin.webContents;
+          const inspectX = params.x ?? params.clientX ?? 0;
+          const inspectY = params.y ?? params.clientY ?? 0;
+          
+          // Open DevTools docked at bottom if not already open
+          if (!mainWC.isDevToolsOpened()) {
+            mainWC.openDevTools({ mode: 'bottom' });
+          }
+          
+          // Inspect the element
+          setTimeout(() => {
+            try {
+              mainWC.inspectElement(inspectX, inspectY);
+            } catch (e) {
+              // Fallback: try on original sender
+              try { sender.inspectElement(inspectX, inspectY); } catch {}
+            }
+          }, 50);
+        } catch (err) {
+          console.error('Inspect Element failed:', err);
+        }
+      }
+    });
 
     const menu = Menu.buildFromTemplate(template);
     const win = BrowserWindow.fromWebContents(embedder);
