@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="home.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
         rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3/fonts/remixicon.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body>
   <div class="home-container">
@@ -59,11 +61,24 @@
       <input type="url" id="urlInput" placeholder="https://example.com">
 
       <!-- Icon picker -->
-      <label for="iconFilter">Icon</label>
-      <input type="text" id="iconFilter" class="icon-filter"
-             placeholder="Search for icon or enter emoji">
-      <div id="iconGrid" class="icon-grid"></div>
-      <input type="hidden" id="selectedIcon">
+      <div class="icon-picker-layout">
+        <nav class="icon-side-nav" id="iconCategoryNav" aria-label="Icon Categories">
+          <!-- Category nav buttons injected here -->
+        </nav>
+        <div class="icon-main">
+          <div class="icon-header">
+            <label for="iconFilter" class="icon-filter-label">Icon</label>
+            <div class="favicon-toggle">
+              <input type="checkbox" id="useFavicon" class="favicon-checkbox">
+              <label for="useFavicon" class="favicon-label">Use site favicon</label>
+            </div>
+          </div>
+          <input type="text" id="iconFilter" class="icon-filter"
+                 placeholder="Search for icon, enter emoji, or type 'favicon'">
+          <div id="iconGrid" class="icon-grid" tabindex="0" aria-label="Icon selection list"></div>
+          <input type="hidden" id="selectedIcon">
+        </div>
+      </div>
 
       <!-- action buttons -->
       <div class="popup-buttons">
@@ -76,36 +91,39 @@
   <!-- Theme loader script -->
   <script src="customization.js"></script>
   <script>
-    // Apply saved theme on page load
+    // Apply saved theme on page load and listen for updates
     document.addEventListener('DOMContentLoaded', () => {
       BrowserCustomizer.applyThemeToPage();
-      
-      // Listen for theme updates from settings
+
+      // Function to update logo and title based on theme
+      function updateLogoAndTitle(theme) {
+        const logoText = document.querySelector('.logo-text');
+        const logoImg = document.querySelector('.logo-img');
+        if (logoText) {
+          logoText.textContent = theme.customTitle || 'Nebula Browser';
+        }
+        if (logoImg) {
+          logoImg.style.display = theme.showLogo ? 'block' : 'none';
+        }
+      }
+
+      // Listen for theme updates via postMessage fallback
       window.addEventListener('message', (event) => {
         if (event.data.type === 'theme-update') {
           const theme = event.data.theme;
           localStorage.setItem('currentTheme', JSON.stringify(theme));
           BrowserCustomizer.applyThemeToPage();
-          
-          // Update logo and title if needed
           updateLogoAndTitle(theme);
         }
       });
-      
-      // Update logo and title based on theme
-      function updateLogoAndTitle(theme) {
-        const logoText = document.querySelector('.logo-text');
-        const logoImg = document.querySelector('.logo-img');
-        
-        if (logoText) {
-          logoText.textContent = theme.customTitle || 'Nebula Browser';
-        }
-        
-        if (!theme.showLogo && logoImg) {
-          logoImg.style.display = 'none';
-        } else if (logoImg) {
-          logoImg.style.display = 'block';
-        }
+
+      // Listen for theme updates via Electron IPC
+      if (window.electronAPI && typeof window.electronAPI.on === 'function') {
+        window.electronAPI.on('theme-update', (theme) => {
+          localStorage.setItem('currentTheme', JSON.stringify(theme));
+          BrowserCustomizer.applyThemeToPage();
+          updateLogoAndTitle(theme);
+        });
       }
     });
   </script>

@@ -1,6 +1,8 @@
-const { app, BrowserWindow, ipcMain, session, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, session, screen, shell, dialog, Menu, clipboard } = require('electron');
+const { pathToFileURL } = require('url');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const PerformanceMonitor = require('./performance-monitor');
 const GPUFallback = require('./gpu-fallback');
 const GPUConfig = require('./gpu-config');
@@ -16,6 +18,33 @@ gpuConfig.configure();
 // Set a custom application name
 app.setName('Nebula');
 
+// --- Custom User Agent (hide Electron token & brand as Nebula) ---
+// Many sites rely on UA sniffing. Default Electron UA contains 'Electron/x.y.z' which
+// makes detection sites label the app as an Electron application. We construct a
+// Chrome‑compatible UA string without the Electron token, appending a Nebula marker.
+// NOTE: Keep the Chrome and Safari tokens for maximum compatibility.
+// If you ever need to temporarily reveal Electron for debugging, set NEBULA_DEBUG_ELECTRON_UA=1.
+const chromeVersion = process.versions.chrome; // matches bundled Chromium
+const nebulaVersion = app.getVersion();
+function computeBaseUA() {
+  let platformPart;
+  if (process.platform === 'win32') {
+    // Use generic Windows 10 token; detailed build numbers rarely needed and can cause UA entropy issues.
+    platformPart = 'Windows NT 10.0; Win64; x64';
+  } else if (process.platform === 'darwin') {
+    // A neutral modern macOS token; avoid exposing real minor version for stability.
+    platformPart = 'Macintosh; Intel Mac OS X 10_15_7';
+  } else {
+    platformPart = 'X11; Linux x86_64';
+  }
+  return `Mozilla/5.0 (${platformPart}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36 Nebula/${nebulaVersion}`;
+}
+
+if (!process.env.NEBULA_DEBUG_ELECTRON_UA) {
+  // Set a fallback UA so any new sessions inherit it automatically.
+  try { app.userAgentFallback = computeBaseUA(); } catch {}
+}
+
 // Setup GPU crash handling
 gpuFallback.setupCrashHandling();
 
@@ -27,13 +56,21 @@ ipcMain.removeHandler('window-close');
 
 
 function createWindow(startUrl) {
-  // Get the available screen size
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  // Capture high‑resolution startup timing markers
+  const perfMarks = { createWindow_called: performance.now() };
 
-  // Ensure nativeWindowOpen is disabled
+  // Get the available screen size (avoid full workArea allocation jank by starting slightly smaller then maximizing later if desired)
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const initialWidth = Math.min(width, Math.round(width * 0.9));
+  const initialHeight = Math.min(height, Math.round(height * 0.9));
+
+  // Window is created hidden; we only show after first meaningful paint to avoid OS‑level pointer jank while Chromium initializes
   let windowOptions = {
-    width,
-    height,
+    width: initialWidth,
+    height: initialHeight,
+    show: false,
+    useContentSize: true,
+    backgroundColor: '#121212', // avoids white flash & early extra paints
     resizable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -43,20 +80,24 @@ function createWindow(startUrl) {
       enableRemoteModule: false, // Deprecated and slow
       nodeIntegrationInSubFrames: false, // Security & performance
       nativeWindowOpen: false,
-      spellcheck: false, // Disable if not needed
+      spellcheck: false,
       webSecurity: true,
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
-      offscreen: false, // Ensure on-screen rendering for GPU
-      enableWebSQL: false, // Disable deprecated features
-      plugins: false // Disable plugins that might interfere with GPU
+      offscreen: false,
+      enableWebSQL: false,
+      plugins: false,
+      backgroundThrottling: false, // keep UI responsive during early load
+      // OAuth compatibility settings
+      partition: 'persist:main',
+      sandbox: false
     },
     fullscreen: false,
     autoHideMenuBar: true,
-    icon: process.platform === 'darwin' 
+    icon: process.platform === 'darwin'
       ? path.join(__dirname, 'assets/images/Logos/Nebula-Favicon.icns')
       : path.join(__dirname, 'assets/images/Logos/Nebula-favicon.png'),
-    title: 'Nebula',
+    title: 'Nebula'
   };
 
   if (process.platform === 'darwin') {
@@ -77,96 +118,41 @@ function createWindow(startUrl) {
   }
 
   const win = new BrowserWindow(windowOptions);
+  perfMarks.browserWindow_instantiated = performance.now();
 
-  // Handle window.open() calls – load URL in this window
+  // Allow window.open() popups (e.g. OAuth / SSO / school portals) so that
+  // POST form submissions and opener relationships are preserved.
+  // We still restrict to http/https for safety; everything else is denied.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    win.loadURL(url);
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return { action: 'allow' };
+    }
     return { action: 'deny' };
   });
 
-  // Intercept direct navigations (e.g., user clicks a link) – load URL in this window
-  win.webContents.on('will-navigate', (event, url) => {
-    event.preventDefault(); // Prevent navigation in the current window
-    win.loadURL(url);
-  });
+  // IMPORTANT: Do NOT intercept 'will-navigate' with preventDefault() because
+  // that strips POST bodies (turning logins into GET requests). Let Chromium
+  // perform the navigation normally. If you need to observe navigations, add
+  // a listener without calling preventDefault().
+  // (Previous code here was causing login forms to fail.)
 
-  // Intercept legacy new-window events – load URL in this window
-  win.webContents.on('new-window', (event, url) => {
-    event.preventDefault(); // Prevent new Electron window
-    win.loadURL(url);
-  });
+  // Remove deprecated 'new-window' handler that forcibly loaded targets in the
+  // same window; this also broke some auth popup flows. setWindowOpenHandler
+  // above now governs popup behavior.
 
-  // ensure all embedded <webview> tags also use the same window
+  // ensure all embedded <webview> tags behave predictably without heavy injections
   win.webContents.on('did-attach-webview', (event, webContents) => {
-    // Set up webview with preload script to provide electronAPI - fixed injection
-    webContents.on('dom-ready', () => {
-      // Simpler, more reliable API injection that doesn't require cloning
-      webContents.executeJavaScript(`
-        if (!window.electronAPI) {
-          // Create a simple bridge without complex objects
-          window.electronAPI = {
-            invoke: function(channel) {
-              const args = Array.prototype.slice.call(arguments, 1);
-              return new Promise(function(resolve, reject) {
-                try {
-                  const ipcRenderer = require('electron').ipcRenderer;
-                  ipcRenderer.invoke(channel, ...args).then(resolve).catch(reject);
-                } catch (err) {
-                  reject(err);
-                }
-              });
-            }
-          };
-          console.log('electronAPI injected successfully');
-        }
-      `).catch(err => {
-        console.error('Failed to inject electronAPI:', err);
-        // Fallback: inject minimal API
-        webContents.executeJavaScript(`
-          window.electronAPI = { invoke: function() { return Promise.resolve(); } };
-        `).catch(() => {});
-      });
-    });
-
-    // intercept window.open() inside webview
+    // Allow popups inside <webview> as well (required for some login flows)
     webContents.setWindowOpenHandler(({ url }) => {
-      webContents.loadURL(url);
-      // record history for webview navigations
-      recordHistory('site-history.json', url);
-      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-      if (m && m[1]) {
-        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-        recordHistory('search-history.json', query);
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return { action: 'allow' };
       }
       return { action: 'deny' };
-    });
-    // intercept legacy new-window on webview
-    webContents.on('new-window', (e, url) => {
-      e.preventDefault();
-      webContents.loadURL(url);
-      // record history for webview navigations
-      recordHistory('site-history.json', url);
-      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-      if (m && m[1]) {
-        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-        recordHistory('search-history.json', query);
-      }
-    });
-    // intercept navigation on webview (e.g. user clicks link)
-    webContents.on('will-navigate', (e, url) => {
-      e.preventDefault();
-      webContents.loadURL(url);
-      // record history for webview navigations
-      recordHistory('site-history.json', url);
-      const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-      if (m && m[1]) {
-        const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-        recordHistory('search-history.json', query);
-      }
     });
   });
 
   win.loadFile('renderer/index.html');
+  perfMarks.loadFile_issued = performance.now();
 
   // if caller passed in a URL, forward it to the renderer after load
   if (startUrl) {
@@ -178,88 +164,111 @@ function createWindow(startUrl) {
   // Set default zoom to 100%
   const zoomFactor = 1.0;
   const loadStartTime = Date.now();
-  win.webContents.on('did-finish-load', () => {
-    win.webContents.setZoomFactor(zoomFactor);
-    
-    // Track load time for performance monitoring
-    const loadTime = Date.now() - loadStartTime;
-    perfMonitor.trackLoadTime(win.webContents.getURL(), loadTime);
-  });
-
-  // Debounced history recording to prevent excessive I/O
-  let historyTimeout;
-  const recordHistory = async (fileName, entry) => {
-    // Clear existing timeout
-    if (historyTimeout) {
-      clearTimeout(historyTimeout);
+  // Show window ASAP after first paint for perceived performance
+  let shown = false;
+  const showNow = (reason) => {
+    if (shown) return;
+    shown = true;
+    win.show();
+    if (process.platform === 'win32') {
+      // Defer maximize to next frame to avoid large-surface first paint cost
+      setTimeout(() => {
+        try { win.maximize(); } catch {}
+      }, 16);
     }
-    
-    // Debounce history recording by 500ms
-    historyTimeout = setTimeout(async () => {
-      if (fileName === 'site-history.json') {
-        // Save to both file and send to renderer
-        const filePath = path.join(__dirname, fileName);
-        let data = [];
-        try { 
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-          data = JSON.parse(fileContent); 
-        } catch {}
-        
-        if (data[0] !== entry) {
-          data.unshift(entry);
-          if (data.length > 100) data.pop();
-          
-          // Use async file operations to prevent blocking
-          try {
-            await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
-          } catch (err) {
-            console.error('Error writing site history:', err);
-          }
-        }
-        // Also send to renderer for localStorage
-        win.webContents.send('record-site-history', entry);
-      } else {
-        // Keep search history in JSON file for now
-        const filePath = path.join(__dirname, fileName);
-        let data = [];
-        try { 
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-          data = JSON.parse(fileContent); 
-        } catch {}
-        
-        if (data[0] !== entry) {
-          data.unshift(entry);
-          if (data.length > 100) data.pop();
-          
-          try {
-            await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
-          } catch (err) {
-            console.error('Error writing search history:', err);
-          }
-        }
-      }
-    }, 500);
+    console.log(`[Startup] Window shown (${reason}) in ${(performance.now() - perfMarks.createWindow_called).toFixed(1)}ms`);
   };
 
-  win.webContents.on('did-navigate', (event, url) => {
-    recordHistory('site-history.json', url);
-    const m = /[?&](?:q|query)=([^&]+)/.exec(url);
-    if (m && m[1]) {
-      const query = decodeURIComponent(m[1].replace(/\+/g, ' '));
-      recordHistory('search-history.json', query);
-    }
+  win.webContents.once('ready-to-show', () => showNow('ready-to-show'));
+  // Fallback in case ready-to-show is delayed
+  setTimeout(() => showNow('timeout-fallback'), 4000);
+
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.setZoomFactor(zoomFactor);
+    const loadTime = Date.now() - loadStartTime;
+    perfMonitor.trackLoadTime(win.webContents.getURL(), loadTime);
+    perfMarks.did_finish_load = performance.now();
+
+    // Defer heavier, non‑critical tasks to next idle slice to keep UI smooth
+    setTimeout(() => {
+      // Kick off GPU status check here (was earlier) to avoid competing with first paint
+      gpuConfig.checkGPUStatus()
+        .then(gpuStatus => {
+          console.log('[Deferred] GPU Configuration Results:');
+          console.log('- GPU Status:', gpuStatus);
+          console.log('- Recommendations:', gpuConfig.getRecommendations());
+        })
+        .catch(err => console.error('[Deferred] GPU status check failed:', err));
+
+      // Start performance monitoring after initial load
+      perfMonitor.start();
+    }, 300);
   });
+
+  // Renderer manages history; no main-process recording here
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(async () => {
-  // Check GPU status and handle errors
-  const gpuStatus = await gpuConfig.checkGPUStatus();
-  console.log('GPU Configuration Results:');
-  console.log('- GPU Status:', gpuStatus);
-  console.log('- Recommendations:', gpuConfig.getRecommendations());
-  
-  // Handle GPU process crashes
+// Configure sessions asynchronously (non-blocking for window creation)
+function configureSessionsAsync() {
+  const sessionsToConfigure = [session.fromPartition('persist:main'), session.defaultSession];
+  try {
+    for (const ses of sessionsToConfigure) {
+      if (!ses) continue;
+      ses.setPermissionRequestHandler((webContents, permission, callback) => {
+        if (['notifications', 'geolocation', 'camera', 'microphone'].includes(permission)) {
+          callback(false);
+        } else {
+          callback(true);
+        }
+      });
+      try {
+        let realUA = ses.getUserAgent();
+        // If Electron token present and we're not in debug mode, recompute using base builder.
+        if (!process.env.NEBULA_DEBUG_ELECTRON_UA) {
+          const hasElectron = /Electron\//i.test(realUA);
+          if (hasElectron || !/Nebula\//.test(realUA)) {
+            realUA = app.userAgentFallback || computeBaseUA();
+            ses.setUserAgent(realUA);
+          }
+        } else {
+          // Debug mode: just append Nebula tag if missing (keeps Electron segment visible)
+            if (realUA && !/Nebula\//.test(realUA)) {
+              ses.setUserAgent(realUA + ' Nebula/' + app.getVersion());
+            }
+        }
+      } catch (e) {
+        console.warn('Failed to read real user agent, keeping default:', e);
+      }
+      ses.cookies.on('changed', (event, cookie, cause, removed) => {
+        if (cookie.domain && (cookie.domain.includes('google') || cookie.domain.includes('accounts'))) {
+          console.log(`Cookie ${removed ? 'removed' : 'added'}: ${cookie.name} for ${cookie.domain}`);
+        }
+      });
+      ses.webRequest.onBeforeSendHeaders((details, callback) => {
+        const headers = details.requestHeaders;
+        if (details.url.includes('accounts.google.com') || details.url.includes('oauth')) {
+          headers['Referrer-Policy'] = 'strict-origin-when-cross-origin';
+          headers['Accept'] = headers['Accept'] || 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
+        }
+        if (!headers['Accept-Language'] && !headers['accept-language']) {
+          headers['Accept-Language'] = 'en-US,en;q=0.9';
+        }
+        callback({ requestHeaders: headers });
+      });
+    }
+    console.log('Session configured successfully for OAuth compatibility');
+  } catch (err) {
+    console.error('Session setup error:', err);
+  }
+}
+
+app.whenReady().then(() => {
+  const t0 = performance.now();
+  createWindow();
+  console.log('[Startup] createWindow invoked in', (performance.now() - t0).toFixed(1), 'ms after app.whenReady');
+
+  // Handle GPU process crashes (still register early)
   app.on('gpu-process-crashed', (event, killed) => {
     console.warn('GPU process crashed, killed:', killed);
     if (!killed) {
@@ -267,28 +276,10 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Optimize session settings for performance
-  const ses = session.defaultSession;
-  
-  try {
-    // Enable request/response caching
-    ses.webRequest.onBeforeSendHeaders((details, callback) => {
-      details.requestHeaders['Cache-Control'] = 'max-age=3600';
-      callback({ requestHeaders: details.requestHeaders });
-    });
-    
-    // Skip preload registration as it's handled in window options
-    console.log('Session configured successfully');
-  } catch (err) {
-    console.error('Session setup error:', err);
-  }
-  
-  // Start performance monitoring
-  perfMonitor.start();
-  
-  createWindow();
+  // Defer session configuration to microtask/next tick (already inexpensive) – keep explicit
+  setImmediate(configureSessionsAsync);
+
   if (process.platform === 'darwin') {
-    // Set macOS dock icon using an icns file for proper display.
     app.dock.setIcon(path.join(__dirname, 'assets/images/Logos/Nebula-Icon.icns'));
   }
   app.on('activate', () => {
@@ -319,10 +310,9 @@ ipcMain.handle('window-close', event => {
 // Site history is now handled via localStorage in the renderer
 // But keep these handlers for compatibility and potential future use
 ipcMain.handle('load-site-history', async () => {
-  // Read from the site history file for settings page
   const filePath = path.join(__dirname, 'site-history.json');
   try {
-    const data = fs.readFileSync(filePath, 'utf-8');
+    const data = await fs.promises.readFile(filePath, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
     return [];
@@ -330,10 +320,9 @@ ipcMain.handle('load-site-history', async () => {
 });
 
 ipcMain.handle('save-site-history', async (event, history) => {
-  // Save to both file and localStorage
   const filePath = path.join(__dirname, 'site-history.json');
   try {
-    fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(history, null, 2));
     return true;
   } catch (err) {
     return false;
@@ -343,7 +332,7 @@ ipcMain.handle('save-site-history', async (event, history) => {
 ipcMain.handle('clear-site-history', async () => {
   const filePath = path.join(__dirname, 'site-history.json');
   try {
-    fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify([], null, 2));
     return true;
   } catch (err) {
     return false;
@@ -353,7 +342,7 @@ ipcMain.handle('clear-site-history', async () => {
 ipcMain.handle('load-search-history', async () => {
   const filePath = path.join(__dirname, 'search-history.json');
   try {
-    const data = fs.readFileSync(filePath, 'utf-8');
+    const data = await fs.promises.readFile(filePath, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
     return [];
@@ -363,7 +352,7 @@ ipcMain.handle('load-search-history', async () => {
 ipcMain.handle('save-search-history', async (event, history) => {
   const filePath = path.join(__dirname, 'search-history.json');
   try {
-    fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(history, null, 2));
     return true;
   } catch (err) {
     return false;
@@ -375,33 +364,98 @@ ipcMain.on('homepage-changed', (event, url) => {
   console.log('[MAIN] homepage-changed →', url);
 });
 
+// Bookmark management
+ipcMain.handle('load-bookmarks', async () => {
+  try {
+    const bookmarksPath = path.join(__dirname, 'bookmarks.json');
+    try {
+      await fs.promises.access(bookmarksPath);
+    } catch {
+      console.log('No bookmarks file found, starting with empty array');
+      return [];
+    }
+    const data = await fs.promises.readFile(bookmarksPath, 'utf8');
+    const bookmarks = JSON.parse(data);
+    console.log(`Loaded ${bookmarks.length} bookmarks from file`);
+    return bookmarks;
+  } catch (error) {
+    console.error('Error loading bookmarks:', error);
+    // Try to create a backup if the file is corrupted
+    const bookmarksPath = path.join(__dirname, 'bookmarks.json');
+    const backupPath = path.join(__dirname, `bookmarks.backup.${Date.now()}.json`);
+    try {
+      await fs.promises.copyFile(bookmarksPath, backupPath);
+      console.log(`Corrupted bookmarks file backed up to: ${backupPath}`);
+    } catch (backupError) {
+      console.error('Failed to create backup:', backupError);
+    }
+    return [];
+  }
+});
+
+ipcMain.handle('save-bookmarks', async (event, bookmarks) => {
+  try {
+    const bookmarksPath = path.join(__dirname, 'bookmarks.json');
+    try {
+      await fs.promises.access(bookmarksPath);
+      const backupPath = path.join(__dirname, 'bookmarks.backup.json');
+      await fs.promises.copyFile(bookmarksPath, backupPath);
+    } catch {}
+    await fs.promises.writeFile(bookmarksPath, JSON.stringify(bookmarks, null, 2));
+    console.log(`Saved ${bookmarks.length} bookmarks to file`);
+    return true;
+  } catch (error) {
+    console.error('Error saving bookmarks:', error);
+    return false;
+  }
+});
 
 ipcMain.handle('clear-browser-data', async () => {
   try {
-    const ses = session.defaultSession;
+    const sessionsToClear = [session.defaultSession, session.fromPartition('persist:main')];
 
-    // Clear cookies
-    await ses.clearStorageData({ storages: ['cookies'] });
-
-    // Clear local storage and other storage data
-    await ses.clearStorageData({ storages: ['localstorage', 'indexdb', 'filesystem', 'websql'] });
-
-    // Clear cache
-    await ses.clearCache();
-
-    // Clear HTTP authentication cache
-    await ses.clearAuthCache();
-
-    // Clear all cookies explicitly to ensure logged-in accounts are logged out
-    const cookies = await ses.cookies.get({});
-    for (const cookie of cookies) {
-      await ses.cookies.remove(cookie.url, cookie.name);
+    for (const ses of sessionsToClear) {
+      if (!ses) continue;
+      // Clear all common site storage types
+      await ses.clearStorageData({
+        storages: [
+          'cookies',
+          'localstorage',
+          'indexdb',
+          'filesystem',
+          'websql',
+          'serviceworkers',
+          'caches',
+          'shadercache',
+          'appcache'
+        ],
+      });
+      // Clear caches and auth
+      await ses.clearCache();
+      await ses.clearAuthCache();
     }
+
+    // Also reset on-disk history JSON files managed by the app
+    const siteHistoryPath = path.join(__dirname, 'site-history.json');
+    const searchHistoryPath = path.join(__dirname, 'search-history.json');
+    try { await fs.promises.writeFile(siteHistoryPath, JSON.stringify([], null, 2)); } catch {}
+    try { await fs.promises.writeFile(searchHistoryPath, JSON.stringify([], null, 2)); } catch {}
 
     return true; // Indicate success
   } catch (error) {
     console.error('Failed to clear browser data:', error);
     return false; // Indicate failure
+  }
+});
+
+// Optional: standalone clear for search history JSON
+ipcMain.handle('clear-search-history', async () => {
+  const filePath = path.join(__dirname, 'search-history.json');
+  try {
+    await fs.promises.writeFile(filePath, JSON.stringify([], null, 2));
+    return true;
+  } catch (err) {
+    return false;
   }
 });
 
@@ -436,21 +490,16 @@ ipcMain.handle('save-site-history-entry', async (event, url) => {
   const filePath = path.join(__dirname, 'site-history.json');
   try {
     let data = [];
-    try { 
-      data = JSON.parse(fs.readFileSync(filePath, 'utf8')); 
+    try {
+      const raw = await fs.promises.readFile(filePath, 'utf8');
+      data = JSON.parse(raw);
     } catch {}
-    
     // Remove if already exists to avoid duplicates
     data = data.filter(item => item !== url);
-    // Add to beginning
+    // Add to beginning and clamp size
     data.unshift(url);
-    // Keep only last 100 entries
-    if (data.length > 100) {
-      data = data.slice(0, 100);
-    }
-    
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    console.log('[MAIN] Saved site history entry:', url);
+    if (data.length > 100) data = data.slice(0, 100);
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
     return true;
   } catch (err) {
     console.error('[MAIN] Error saving site history entry:', err);
@@ -495,5 +544,232 @@ ipcMain.handle('apply-gpu-fallback', (event, level) => {
   } catch (err) {
     console.error('Error applying GPU fallback:', err);
     return { error: err.message };
+  }
+});
+
+// About/info handler
+ipcMain.handle('get-about-info', () => {
+  try {
+    return {
+      appName: app.getName(),
+      appVersion: app.getVersion(),
+      isPackaged: app.isPackaged,
+      appPath: app.getAppPath(),
+      userDataPath: app.getPath('userData'),
+      electronVersion: process.versions.electron,
+      chromeVersion: process.versions.chrome,
+      nodeVersion: process.versions.node,
+      v8Version: process.versions.v8,
+      platform: process.platform,
+      arch: process.arch,
+      osType: os.type(),
+      osRelease: os.release(),
+      cpu: os.cpus()?.[0]?.model || 'Unknown CPU',
+      totalMemGB: Math.round((os.totalmem() / (1024 ** 3)) * 10) / 10,
+    };
+  } catch (err) {
+    console.error('Error building about info:', err);
+    return { error: err.message };
+  }
+});
+
+// Toggle DevTools for the requesting window (main window webContents)
+ipcMain.handle('open-devtools', (event) => {
+  const wc = BrowserWindow.fromWebContents(event.sender);
+  if (!wc) return false;
+  const contents = wc.webContents;
+  if (contents.isDevToolsOpened()) {
+    contents.closeDevTools();
+  } else {
+  // Open docked inside the main window (bottom). Other options: 'right', 'undocked', 'detach'
+  contents.openDevTools({ mode: 'bottom' });
+  }
+  return contents.isDevToolsOpened();
+});
+
+// Open local file dialog -> returns file:// URL (or null if cancelled)
+ipcMain.handle('show-open-file-dialog', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'HTML Files', extensions: ['html', 'htm', 'xhtml'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (result.canceled || !result.filePaths || !result.filePaths.length) return null;
+    const filePath = result.filePaths[0];
+    try {
+      return pathToFileURL(filePath).href;
+    } catch {
+      // Fallback manual conversion
+      let p = filePath.replace(/\\/g, '/');
+      if (!p.startsWith('/')) p = '/' + p; // ensure leading slash for drive letters
+      return 'file://' + (p.startsWith('/') ? '/' : '') + p; // double slash safety
+    }
+  } catch (err) {
+    console.error('open-file dialog failed:', err);
+    return null;
+  }
+});
+
+// Helper to build and show a native context menu for a given webContents + params
+function buildAndShowContextMenu(sender, params = {}) {
+  try {
+    const embedder = sender.hostWebContents || sender;
+    const template = [];
+
+    template.push(
+      { label: 'Back', enabled: sender.canGoBack?.(), click: () => { try { sender.goBack(); } catch {} } },
+      { label: 'Forward', enabled: sender.canGoForward?.(), click: () => { try { sender.goForward(); } catch {} } },
+      { label: 'Reload', click: () => { try { sender.reload(); } catch {} } },
+      { type: 'separator' }
+    );
+
+    // Link actions
+    const linkURL = params.linkURL && params.linkURL.startsWith('http') ? params.linkURL : undefined;
+    if (linkURL) {
+      template.push(
+        { label: 'Open Link in New Tab', click: () => embedder.send('context-menu-command', { cmd: 'open-link-new-tab', url: linkURL }) },
+        { label: 'Open Link Externally', click: () => shell.openExternal(linkURL).catch(()=>{}) },
+        { label: 'Copy Link Address', click: () => clipboard.writeText(linkURL) },
+        { type: 'separator' }
+      );
+    }
+
+    // Image actions
+    const imageURL = (params.mediaType === 'image' && params.srcURL) ? params.srcURL : (params.imgURL || undefined);
+    if (imageURL) {
+      template.push(
+        { label: 'Open Image in New Tab', click: () => embedder.send('context-menu-command', { cmd: 'open-image-new-tab', url: imageURL }) },
+        { label: 'Copy Image Address', click: () => clipboard.writeText(imageURL) },
+  { label: 'Save Image As...', click: () => embedder.send('context-menu-command', { cmd: 'save-image', url: imageURL, mime: params.mediaType === 'image' ? params.mimeType : undefined }) },
+        { type: 'separator' }
+      );
+    }
+
+    // Text / editable
+    if (params.isEditable) {
+      template.push(
+        { label: 'Undo', role: 'undo' },
+        { label: 'Redo', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cut', role: 'cut' },
+        { label: 'Copy', role: 'copy' },
+        { label: 'Paste', role: 'paste' },
+        { label: 'Select All', role: 'selectAll' },
+        { type: 'separator' }
+      );
+    } else if (params.selectionText) {
+      template.push(
+        { label: 'Copy', role: 'copy' },
+        { label: 'Select All', role: 'selectAll' },
+        { type: 'separator' }
+      );
+    }
+
+    template.push({
+      label: 'Inspect Element',
+      click: () => {
+        try {
+          // Use the main window's webContents for DevTools
+          const mainWin = BrowserWindow.fromWebContents(sender.hostWebContents || sender);
+          const mainWC = mainWin.webContents;
+          const inspectX = params.x ?? params.clientX ?? 0;
+          const inspectY = params.y ?? params.clientY ?? 0;
+          
+          // Open DevTools docked at bottom if not already open
+          if (!mainWC.isDevToolsOpened()) {
+            mainWC.openDevTools({ mode: 'bottom' });
+          }
+          
+          // Inspect the element
+          setTimeout(() => {
+            try {
+              mainWC.inspectElement(inspectX, inspectY);
+            } catch (e) {
+              // Fallback: try on original sender
+              try { sender.inspectElement(inspectX, inspectY); } catch {}
+            }
+          }, 50);
+        } catch (err) {
+          console.error('Inspect Element failed:', err);
+        }
+      }
+    });
+
+    const menu = Menu.buildFromTemplate(template);
+    const win = BrowserWindow.fromWebContents(embedder);
+    if (win) menu.popup({ window: win });
+  } catch (err) {
+    console.error('Failed to build context menu:', err);
+  }
+}
+
+// IPC trigger (legacy / renderer-requested)
+ipcMain.handle('show-context-menu', (event, params = {}) => {
+  buildAndShowContextMenu(event.sender, params);
+});
+
+// Automatic native context menu for any webContents (windows + webviews)
+app.on('web-contents-created', (event, contents) => {
+  contents.on('context-menu', (e, params) => {
+    buildAndShowContextMenu(contents, params);
+  });
+});
+
+// --- Image save handlers ---
+ipcMain.handle('save-image-from-dataurl', async (event, { suggestedName = 'image', dataUrl }) => {
+  try {
+    if (!dataUrl || !dataUrl.startsWith('data:')) return false;
+    const match = /^data:(.*?);base64,(.*)$/.exec(dataUrl);
+    if (!match) return false;
+    const mime = match[1] || 'application/octet-stream';
+    const ext = (mime.split('/')[1] || 'png').split(';')[0];
+    const buf = Buffer.from(match[2], 'base64');
+    const win = BrowserWindow.fromWebContents(event.sender.hostWebContents || event.sender);
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `${suggestedName}.${ext}` });
+    if (canceled || !filePath) return false;
+    await fs.promises.writeFile(filePath, buf);
+    return true;
+  } catch (err) {
+    console.error('save-image-from-dataurl failed:', err);
+    return false;
+  }
+});
+
+ipcMain.handle('save-image-from-url', async (event, { url }) => {
+  if (!url) return false;
+  const win = BrowserWindow.fromWebContents(event.sender.hostWebContents || event.sender);
+  try {
+    let dataBuf;
+    if (url.startsWith('http')) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const arrayBuf = await res.arrayBuffer();
+      dataBuf = Buffer.from(arrayBuf);
+      const ctype = res.headers.get('content-type') || 'application/octet-stream';
+      const ext = (ctype.split('/')[1] || 'png').split(';')[0];
+      const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `image.${ext}` });
+      if (canceled || !filePath) return false;
+      await fs.promises.writeFile(filePath, dataBuf);
+      return true;
+    } else if (url.startsWith('data:')) {
+      // Forward to dataURL handler path – easier to keep logic single
+      return ipcMain.emit('save-image-from-dataurl', event, { dataUrl: url });
+    } else if (url.startsWith('file:')) {
+      // Copy file to chosen destination
+      const filePathSrc = new URL(url).pathname.replace(/^\//, '');
+      const base = path.basename(filePathSrc);
+      const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: base });
+      if (canceled || !filePath) return false;
+      await fs.promises.copyFile(filePathSrc, filePath);
+      return true;
+    } else {
+      return false;
+    }
+  } catch (err) {
+    console.error('save-image-from-url failed:', err);
+    return false;
   }
 });

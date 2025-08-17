@@ -55,6 +55,22 @@
       background: rgba(123, 46, 255, 0.1);
     }
     
+    .custom-theme-btn {
+      border: 2px dashed rgba(255, 255, 255, 0.3) !important;
+      opacity: 0.9;
+    }
+    
+    .custom-theme-btn:hover {
+      border-color: var(--accent) !important;
+      opacity: 1;
+    }
+    
+    .custom-theme-btn.active {
+      border-color: var(--primary) !important;
+      background: rgba(123, 46, 255, 0.15) !important;
+      opacity: 1;
+    }
+    
     .theme-preview {
       width: 60px;
       height: 40px;
@@ -195,6 +211,13 @@
       color: var(--primary);
     }
     
+    .preview-text {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 5px;
+    }
+    
     .preview-search {
       width: 60%;
       height: 40px;
@@ -214,30 +237,70 @@
       background: var(--accent);
       border-radius: 8px;
     }
+
+    /* About actions */
+    .about-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  .github-btn, .help-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+  .github-btn:hover, .help-btn:hover {
+      background: var(--accent);
+    }
+  .github-btn svg, .help-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      display: block;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>⚙️ Browser Settings</h1>
+  <div class="container" role="application">
+    <aside class="sidebar" aria-label="Settings categories">
+      <h1>⚙️ Settings</h1>
+      <nav class="tabs" role="tablist">
+        <button class="tab-link active" role="tab" aria-selected="true" aria-controls="panel-general" id="tab-general" data-tab="general">General</button>
+        <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-appearance" id="tab-appearance" data-tab="appearance">Appearance</button>
+        <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-history" id="tab-history" data-tab="history">History</button>
+        <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-about" id="tab-about" data-tab="about">About</button>
+      </nav>
+    </aside>
 
-    <div class="setting-group">
-      <label for="clear-data-btn">Clear All Cookies &amp; Data</label>
-      <button id="clear-data-btn">Clear Data</button>
-    </div>
+    <main class="content">
+      <!-- General Panel -->
+      <section class="tab-panel active" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
+        <h2>General</h2>
+        <div class="setting-group">
+          <label for="clear-data-btn">Clear All Cookies &amp; Data</label>
+          <button id="clear-data-btn">Clear Data</button>
+        </div>
+        <p class="note">Settings are stored locally on this device.</p>
+        <div class="debug-info" id="debug-info">Loading debug info...</div>
+      </section>
 
-    <p class="note">Settings are stored locally on this device.</p>
-
-    <div class="debug-info" id="debug-info">Loading debug info...</div>
-
-    <!-- Customization Section -->
-    <section>
-      <h2>🎨 Browser Customization</h2>
-      
-      <!-- Theme Selection -->
-      <div class="customization-group">
-        <h3>Theme Presets</h3>
+      <!-- Appearance Panel -->
+      <section class="tab-panel" id="panel-appearance" role="tabpanel" aria-labelledby="tab-appearance">
+        <h2>🎨 Appearance</h2>
+        <!-- Theme Selection -->
+        <div class="customization-group">
+          <h3>Theme Presets</h3>
         <div class="theme-selector">
-          <button id="theme-default" class="theme-btn active" data-theme="default">
+          <button id="theme-default" class="theme-btn" data-theme="default">
             <div class="theme-preview" style="background: linear-gradient(145deg, #121418, #1B1035);"></div>
             <span>Default</span>
           </button>
@@ -285,12 +348,16 @@
             <div class="theme-preview" style="background: linear-gradient(145deg, #f8f4ff, #e6d8ff);"></div>
             <span>Lavender Fields</span>
           </button>
+          <button id="theme-custom" class="theme-btn custom-theme-btn" data-theme="custom" style="display: none;">
+            <div class="theme-preview" style="background: linear-gradient(145deg, var(--bg), var(--gradient-color));"></div>
+            <span>Custom</span>
+          </button>
         </div>
-      </div>
+        </div>
 
-      <!-- Color Customization -->
-      <div class="customization-group">
-        <h3>Custom Colors</h3>
+        <!-- Color Customization -->
+        <div class="customization-group">
+          <h3>Custom Colors</h3>
         <div class="color-controls">
           <div class="color-group">
             <label for="bg-color">Background:</label>
@@ -313,11 +380,11 @@
             <input type="color" id="text-color" value="#E0E0E0">
           </div>
         </div>
-      </div>
+        </div>
 
-      <!-- Home Page Layout -->
-      <div class="customization-group">
-        <h3>Home Page Layout</h3>
+        <!-- Home Page Layout -->
+        <div class="customization-group">
+          <h3>Home Page Layout</h3>
         <div class="layout-options">
           <label>
             <input type="radio" name="layout" value="centered" checked>
@@ -332,11 +399,11 @@
             <span>Compact View</span>
           </label>
         </div>
-      </div>
+        </div>
 
-      <!-- Logo Customization -->
-      <div class="customization-group">
-        <h3>Logo & Branding</h3>
+        <!-- Logo Customization -->
+        <div class="customization-group">
+          <h3>Logo & Branding</h3>
         <div class="logo-options">
           <label for="show-logo">
             <input type="checkbox" id="show-logo" checked>
@@ -347,11 +414,11 @@
             <input type="text" id="custom-title" placeholder="Nebula Browser" maxlength="50">
           </label>
         </div>
-      </div>
+        </div>
 
-      <!-- Theme Management -->
-      <div class="customization-group">
-        <h3>Theme Management</h3>
+        <!-- Theme Management -->
+        <div class="customization-group">
+          <h3>Theme Management</h3>
         <div class="theme-management">
           <button id="save-custom-theme">Save Current as Custom Theme</button>
           <button id="export-theme">Export Theme</button>
@@ -359,14 +426,15 @@
           <input type="file" id="theme-file-input" accept=".json" style="display: none;">
           <button id="reset-to-default">Reset to Default</button>
         </div>
-      </div>
+        </div>
 
-      <!-- Live Preview -->
-      <div class="customization-group">
-        <h3>Preview</h3>
+        <!-- Live Preview -->
+        <div class="customization-group">
+          <h3>Preview</h3>
         <div class="preview-container" id="preview-container">
           <div class="preview-home">
-            <div class="preview-logo">🌌 Nebula</div>
+            <div class="preview-logo" id="preview-logo">../assets/images/Logos/Nebula-Logo.svg</div>
+            <div class="preview-text">Nebula</div>
             <div class="preview-search"></div>
             <div class="preview-bookmarks">
               <div class="preview-bookmark"></div>
@@ -375,21 +443,79 @@
             </div>
           </div>
         </div>
-      </div>
-    </section>
+        </div>
+      </section>
 
-    <!-- add history views -->
-    <section>
-      <h2>Search History</h2>
-      <ul id="search-history-list"></ul>
-      <button id="clear-search-history-btn" style="margin-top: 10px;">Clear Search History</button>
-    </section>
-    <section>
-      <h2>Site History</h2>
-      <ul id="site-history-list"></ul>
-      <button id="clear-site-history-btn" style="margin-top: 10px;">Clear Site History</button>
-      <button id="add-test-history-btn" style="margin-top: 10px; margin-left: 10px;">Add Test History</button>
-    </section>
+      <!-- History Panel -->
+      <section class="tab-panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+        <h2>History</h2>
+        <div class="customization-group">
+          <h3>Search History</h3>
+          <ul id="search-history-list"></ul>
+          <button id="clear-search-history-btn" style="margin-top: 10px;">Clear Search History</button>
+        </div>
+        <div class="customization-group">
+          <h3>Site History</h3>
+          <ul id="site-history-list"></ul>
+          <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <button id="clear-site-history-btn">Clear Site History</button>
+            <button id="add-test-history-btn">Add Test History</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- About Panel -->
+      <section class="tab-panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about">
+        <h2>About</h2>
+        <div class="customization-group">
+          <h3>Application</h3>
+          <ul id="about-app">
+            <li><strong>Name:</strong> <span id="about-app-name">Loading...</span></li>
+            <li><strong>Version:</strong> <span id="about-app-version">Loading...</span></li>
+            <li><strong>Packaged:</strong> <span id="about-packaged">Loading...</span></li>
+            <li><strong>User data:</strong> <span id="about-userdata" style="word-break: break-all;">Loading...</span></li>
+          </ul>
+        </div>
+
+        <div class="customization-group">
+          <h3>Runtime</h3>
+          <ul id="about-runtime">
+            <li><strong>Electron:</strong> <span id="about-electron">Loading...</span></li>
+            <li><strong>Chromium:</strong> <span id="about-chrome">Loading...</span></li>
+            <li><strong>Node.js:</strong> <span id="about-node">Loading...</span></li>
+            <li><strong>V8:</strong> <span id="about-v8">Loading...</span></li>
+          </ul>
+        </div>
+
+        <div class="customization-group">
+          <h3>System</h3>
+          <ul id="about-system">
+            <li><strong>OS:</strong> <span id="about-os">Loading...</span></li>
+            <li><strong>CPU:</strong> <span id="about-cpu">Loading...</span></li>
+            <li><strong>Architecture:</strong> <span id="about-arch">Loading...</span></li>
+            <li><strong>Memory:</strong> <span id="about-mem">Loading...</span></li>
+          </ul>
+        </div>
+
+        <div class="customization-group about-actions">
+          <button id="copy-about-btn">Copy diagnostics</button>
+          <a id="github-link" href="https://github.com/Bobbybear007/NebulaBrowser" class="github-btn" rel="noopener noreferrer">
+            <!-- GitHub mark (Octicons) MIT License -->
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" role="img">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+            <span>GitHub</span>
+          </a>
+          <a id="help-link" href="https://nebula.zambazosmedia.group" class="help-btn" rel="noopener noreferrer">
+            <!-- Help icon -->
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" role="img">
+              <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 15a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 12 17zm-.02-1.9c-.6 0-1.02-.42-1.02-.98 0-1.97 2.76-1.95 2.76-3.62 0-.77-.66-1.4-1.72-1.4-1 0-1.67.5-2.06 1.22-.3.54-.95.73-1.45.44-.54-.31-.72-1-.42-1.53C7.7 7.7 9.06 6.5 12 6.5c2.26 0 3.98 1.3 3.98 3.35 0 2.74-2.96 2.77-3 3.83-.03.6-.43 1.02-1 1.02z"/>
+            </svg>
+            <span>Help</span>
+          </a>
+        </div>
+      </section>
+    </main>
   </div>
 
   <!-- status overlay moved outside of .container -->
@@ -512,8 +638,33 @@
           console.log('[SETTINGS DEBUG] Displaying', siteHistory.length, 'site history items');
           siteHistory.forEach(item => {
             const li = document.createElement('li');
-            li.textContent = item;
             li.style.wordBreak = 'break-all';
+            // Create a clickable link that asks host to navigate in a new tab
+            const a = document.createElement('a');
+            a.href = item;
+            a.textContent = item;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.color = 'var(--accent)';
+            a.style.textDecoration = 'none';
+            a.addEventListener('click', (e) => {
+              e.preventDefault();
+              try {
+                if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+                  // Ask the host to open this URL in a new tab to keep Settings open
+                  window.electronAPI.sendToHost('navigate', item, { newTab: true });
+                } else if (window.parent) {
+                  // Fallback: postMessage to parent if available
+                  window.parent.postMessage({ type: 'navigate', url: item }, '*');
+                } else {
+                  // Last resort: open in this webview
+                  window.location.href = item;
+                }
+              } catch (err) {
+                console.error('[SETTINGS DEBUG] Failed to trigger navigation for', item, err);
+              }
+            });
+            li.appendChild(a);
             siteList.appendChild(li);
           });
         } else {

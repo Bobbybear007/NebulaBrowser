@@ -17,6 +17,14 @@ const electronAPI = {
       console.error('IPC send error:', err);
     }
   },
+  // Send message to embedding page (webview host)
+  sendToHost: (ch, ...args) => {
+    try {
+      return ipcRenderer.sendToHost(ch, ...args);
+    } catch (err) {
+      console.error('IPC sendToHost error:', err);
+    }
+  },
   invoke: (ch, ...args) => {
     try {
       return ipcRenderer.invoke(ch, ...args);
@@ -39,7 +47,32 @@ const electronAPI = {
     } catch (err) {
       console.error('IPC removeListener error:', err);
     }
-  }
+  },
+  toggleDevTools: () => {
+    try {
+      return ipcRenderer.invoke('open-devtools');
+    } catch (err) {
+      console.error('IPC open-devtools error:', err);
+      return Promise.reject(err);
+    }
+  },
+  openLocalFile: async () => {
+    try {
+      return await ipcRenderer.invoke('show-open-file-dialog');
+    } catch (err) {
+      console.error('IPC openLocalFile error:', err);
+      return null;
+    }
+  },
+  showContextMenu: (params) => {
+    try {
+      return ipcRenderer.invoke('show-context-menu', params);
+    } catch (err) {
+      console.error('IPC showContextMenu error:', err);
+    }
+  },
+  saveImageToDisk: async (suggestedName, dataUrl) => ipcRenderer.invoke('save-image-from-dataurl', { suggestedName, dataUrl }),
+  saveImageFromNet: async (url) => ipcRenderer.invoke('save-image-from-url', { url })
 };
 
 // Cache for bookmarks to reduce IPC calls
@@ -77,3 +110,13 @@ const bookmarksAPI = {
 // Expose APIs to main world
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 contextBridge.exposeInMainWorld('bookmarksAPI', bookmarksAPI);
+
+// Minimal about API for settings page
+contextBridge.exposeInMainWorld('aboutAPI', {
+  getInfo: () => ipcRenderer.invoke('get-about-info')
+});
+
+// Relay context-menu commands from main to active renderer context (open new tabs etc.)
+ipcRenderer.on('context-menu-command', (event, payload) => {
+  window.dispatchEvent(new CustomEvent('nebula-context-command', { detail: payload }));
+});

@@ -7,21 +7,25 @@ html, body {
   font-family: 'Segoe UI', sans-serif;
 }
 
-#tab-bar {
-  display: flex;
-  padding-left: 80px; /* leave room for macOS traffic lights */
-  overflow-x: auto; /* allow scrolling when many tabs */
-  /* custom scrollbar styling */
-  scrollbar-color: #444 #2a2a3c;   /* thumb and track for Firefox */
-  scrollbar-width: thin;            /* slimmer track */
+/* Global variables */
+:root {
+  /* Space reserved on the left for system window controls (traffic lights on macOS).
+     Applied cross-platform per request to keep a consistent layout. */
+  --window-controls-offset: 80px; /* adjust if needed */
 }
 
-#tab-bar > * {
-  flex: 1 1 0;
-  text-align: center;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/* TAB STRIP */
+#tab-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  /* Increase left padding to avoid overlap with OS window controls area */
+  padding: 2px 6px 0 var(--window-controls-offset);
+  background: #1b1c20; /* strip background like modern browsers */
+  border-bottom: 1px solid #2a2c33; /* hairline under tabs */
+  overflow-x: auto; /* scroll when many tabs */
+  scrollbar-color: #444 #2a2a3c;   /* thumb and track for Firefox */
+  scrollbar-width: thin;            /* slimmer track */
 }
 
 /* NAVBAR LAYOUT */
@@ -32,7 +36,8 @@ html, body {
   padding: 6px 10px;
   background: #1e1e2e;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  /* flatter header to reduce paint cost */
+  box-shadow: none;
 }
 
 .nav-left,
@@ -76,7 +81,7 @@ html, body {
   padding: 6px 10px;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 120ms ease;
 }
 
 #nav button:hover {
@@ -130,57 +135,133 @@ html, body {
   width: 100%;
   position: relative;
 }
+#webviews.hidden {
+  display: none;
+}
 
 #webviews webview {
   flex: 1;
-  display: none;
+  width: 100%;
+  height: 100%;
   border: none;
+  display: none;
+}
+#webviews webview.active {
+  display: flex;
+}
+/* When webviews is hidden, collapse its flex size */
+#webviews.hidden {
+  flex: 0;
 }
 
-#webviews webview.active {
+/* HOME CONTAINER */
+#home-container {
+  flex: 1;
+  display: none;
+  width: 100%;
+  position: relative;
+}
+
+#home-container.active {
+  display: flex;
+}
+
+#home-webview {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: none;
+  flex: 1;
+}
+/* Show home webview when container is active */
+#home-container.active > #home-webview {
   display: flex;
 }
 
 /* TABS */
 .tab {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  margin: 4px 4px 0 0;
-  background: #222;
-  border-radius: 8px 8px 0 0;
+  gap: 8px;
+  padding: 4px 8px; /* slimmer padding */
+  margin: 0;
+  height: 28px; /* reduce overall tab height */
+  color: #ddd;
+  /* use flat background to avoid gradient paints */
+  background: #24262b;
+  border: 1px solid #2b2d34;
+  border-bottom: none; /* let it visually merge with the strip line */
+  border-radius: 6px 6px 0 0; /* slightly tighter radius */
   cursor: pointer;
-  transition: background 0.2s, flex 0.2s;
-  min-width: 80px; /* prevent tabs from getting too small */
+  user-select: none;
+  max-width: 260px;
+  min-width: 120px;
+  flex: 0 1 180px; /* like Chrome: shrink when crowded */
+  overflow: hidden;
+  transition: background 120ms ease, color 120ms ease;
 }
 
-.tab:hover {
-  background: #333;
-}
+.tab:hover { background: #2a2c33; }
 
 .tab.active {
-  background: #444;
-  font-weight: bold;
-  flex: 3 1 0; /* increased grow factor for larger active tab */
-  min-width: 120px; /* larger min width for the active tab */
+  color: #fff;
+  background: #2f323a;
+  /* remove expensive inner shadows */
+  box-shadow: none;
 }
 
-.tab img {
+.tab .tab-favicon {
   width: 16px;
   height: 16px;
-  margin-right: 6px;
   border-radius: 2px;
+  flex: 0 0 auto;
 }
 
-.tab button {
-  margin-left: 8px;
-  background: none;
-  border: none;
-  color: #f55;
-  font-weight: bold;
-  cursor: pointer;
+.tab .tab-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
 }
+
+.tab .tab-close {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: #b5b5b5;
+  opacity: 0; /* hidden by default */
+  transition: background 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close { opacity: 1; }
+.tab .tab-close:hover { background: #3b3e47; color: #fff; }
+.tab .tab-close:active { background: #2e3139; }
+
+/* New tab (+) button aligned to the right end of the strip */
+.new-tab-button {
+  margin-left: 6px;
+  flex: 0 0 auto;
+  width: 24px;  /* tighter button */
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid #2b2d34;
+  background: #23252b;
+  color: #d5d5d5;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.new-tab-button:hover { background: #2b2d34; color: #fff; border-color: #3a3d46; }
+.new-tab-button:active { background: #262830; }
 
 /* ZOOM CONTROLS */
 .zoom-controls {
@@ -229,7 +310,7 @@ html, body {
   color: white;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 120ms ease;
 }
 #window-controls button:hover {
   background: rgba(255,255,255,0.1);
@@ -251,4 +332,42 @@ html, body {
 }
 #tab-bar::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Tab animations */
+.tab--flip {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+.tab--enter {
+  animation: tab-enter 160ms ease-out both;
+}
+.tab--closing {
+  animation: tab-exit 140ms ease-in both;
+}
+
+@keyframes tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tab-exit {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.95);
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
