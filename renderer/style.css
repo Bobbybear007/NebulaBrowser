@@ -40,6 +40,40 @@ html, body {
   box-shadow: none;
 }
 
+/* Make the top nav a draggable region on macOS when we use a hidden titlebar.
+   Interactive controls inside must opt-out with -webkit-app-region: no-drag. */
+@supports (-webkit-app-region: drag) {
+  /* Make both the tab strip and the nav area draggable so users have a
+     larger region to click-and-drag the window. Keep interactive elements
+     marked as no-drag so buttons and tabs remain clickable. */
+  #tab-bar,
+  #nav {
+    -webkit-app-region: drag;
+    user-select: none;
+    /* keep the appearance consistent even if transparent window behind it */
+    background: rgba(30,30,46,0.9);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Interactive controls must explicitly opt-out of dragging. This keeps
+     the larger draggable area while preserving normal click behavior. */
+  #nav button,
+  #nav input,
+  #menu-popup,
+  .tab,
+  .tab *,
+  .new-tab-button,
+  .tab .tab-close,
+  #window-controls {
+    -webkit-app-region: no-drag;
+  }
+
+  /* Ensure the new-tab button (which sits on the tab strip) is not draggable */
+  #tab-bar .new-tab-button {
+    -webkit-app-region: no-drag;
+  }
+}
+
 .nav-left,
 .nav-center,
 .nav-right {

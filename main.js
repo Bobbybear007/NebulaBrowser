@@ -101,10 +101,15 @@ function createWindow(startUrl) {
   };
 
   if (process.platform === 'darwin') {
+    // Use a hidden/transparent title bar on macOS so we can render a
+    // custom, sleeker header in the renderer while still supporting
+    // native traffic-light placement. The renderer will expose a
+    // draggable region via CSS (-webkit-app-region: drag).
     Object.assign(windowOptions, {
       frame: true,
       titleBarStyle: 'hidden',
       trafficLightPosition: { x: 15, y: 20 },
+      // Transparent background so renderer chrome blends with content.
       backgroundColor: '#00000000',
       transparent: true,
     });
