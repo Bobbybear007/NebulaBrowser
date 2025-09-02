@@ -12,6 +12,17 @@ const perfMonitor = new PerformanceMonitor();
 const gpuFallback = new GPUFallback();
 const gpuConfig = new GPUConfig();
 
+// Try to enable WebAuthn/platform authenticator features early.
+// This helps Chromium expose platform authenticators (Touch ID / built-in) where supported.
+try {
+  app.commandLine.appendSwitch('enable-experimental-web-platform-features');
+  // Add common WebAuthn-related feature flags. These are safe attempts to enable platform
+  // authenticators and related WebAuthn plumbing in embedded Chromium builds.
+  app.commandLine.appendSwitch('enable-features', 'WebAuthn,WebAuthnNestedAssertions,WebAuthnCable');
+} catch (e) {
+  // Non-fatal: some environments may not allow commandLine changes at this time.
+}
+
 // Configure GPU settings before app is ready
 gpuConfig.configure();
 
@@ -208,6 +219,28 @@ function createWindow(startUrl) {
       // Start performance monitoring after initial load
       perfMonitor.start();
     }, 300);
+    // Diagnostic: check WebAuthn / platform authenticator availability in renderer
+    try {
+      win.webContents.executeJavaScript(`(async function(){
+        const out = { hasNavigator: !!window.navigator, hasCredentials: !!navigator.credentials, hasCreate: !!(navigator.credentials && navigator.credentials.create), hasGet: !!(navigator.credentials && navigator.credentials.get) };
+        try {
+          if (window.PublicKeyCredential) {
+            out.PublicKeyCredential = true;
+            out.isUserVerifyingPlatformAuthenticatorAvailable = typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function' ? await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : 'unknown';
+          } else {
+            out.PublicKeyCredential = false;
+          }
+        } catch (e) { out.webauthnError = String(e); }
+        return out;
+      })()`)
+      .then(result => {
+        console.log('[WebAuthn Diagnostic] renderer report:', result);
+      }).catch(err => {
+        console.error('[WebAuthn Diagnostic] executeJavaScript failed:', err);
+      });
+    } catch (e) {
+      console.warn('WebAuthn diagnostic injection skipped:', e);
+    }
   });
 
   // Renderer manages history; no main-process recording here

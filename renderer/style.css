@@ -38,6 +38,9 @@ html, body {
   gap: 12px;
   /* flatter header to reduce paint cost */
   box-shadow: none;
+  /* Ensure the nav sits above embedded <webview> surfaces */
+  position: relative;
+  z-index: 10000;
 }
 
 /* Make the top nav a draggable region on macOS when we use a hidden titlebar.
@@ -125,6 +128,8 @@ html, body {
 /* MENU DROPDOWN */
 .menu-wrapper {
   position: relative;
+  /* keep wrapper on a higher layer so absolute popup can composit above webviews */
+  z-index: 10001;
 }
 
 #menu-popup {
@@ -138,7 +143,11 @@ html, body {
   flex-direction: column;
   min-width: 200px;  /* wider dropdown */
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  z-index: 100;
+  /* Much higher z-index and force its own compositing layer so it renders above <webview> guests */
+  z-index: 20000;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform, opacity;
 }
 
 #menu-popup button {
@@ -168,6 +177,8 @@ html, body {
   display: flex;
   width: 100%;
   position: relative;
+  /* make sure webviews render on a separate base layer behind nav */
+  z-index: 0;
 }
 #webviews.hidden {
   display: none;
@@ -194,6 +205,7 @@ html, body {
   display: none;
   width: 100%;
   position: relative;
+  z-index: 0;
 }
 
 #home-container.active {
@@ -206,6 +218,8 @@ html, body {
   border: none;
   display: none;
   flex: 1;
+  position: relative;
+  z-index: 0;
 }
 /* Show home webview when container is active */
 #home-container.active > #home-webview {
