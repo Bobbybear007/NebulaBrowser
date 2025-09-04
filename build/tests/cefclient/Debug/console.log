@@ -1,0 +1,178 @@
+Level: Info
+Message: [Report Only] Refused to load the script 'https://www.google.com/recaptcha/enterprise.js' because it violates the following Content Security Policy directive: "script-src 'none'". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.
+
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 0
+-----------------------
+Level: Info
+Message: [Report Only] Refused to execute inline script because it violates the following Content Security Policy directive: "script-src 'none'". Either the 'unsafe-inline' keyword, a hash ('sha256-B2jAL3UepSoKXTWUKX0TKbbBzz+Oa17xwlXntLPpfOs='), or a nonce ('nonce-...') is required to enable inline execution.
+
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 14
+-----------------------
+Level: Info
+Message: [Report Only] Refused to load the script 'https://www.gstatic.com/recaptcha/releases/Lu6n5xwy2ghvnPNo3IxkhcCb/recaptcha__en.js' because it violates the following Content Security Policy directive: "script-src 'none'". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.
+
+Source: https://www.google.com/recaptcha/enterprise.js
+Line: 1
+-----------------------
+Level: Error
+Message: [Report Only] Refused to frame 'https://www.google.com/recaptcha/enterprise/anchor?ar=1&k=6LdLLIMbAAAAAIl-KLj9p1ePhM-4LCCDbjtJLqRO&co=aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbTo0NDM.&hl=en&v=Lu6n5xwy2ghvnPNo3IxkhcCb&size=normal&s=v2eYtbimieeOViKrWPnsBp5S8JV4JJ0gJFT4MSrd4nKzEdI8BWXb-u1OUXmiMnroCaRzMsPMk_0Cph8ymLvdbSV3PH6Kausu1rBe-qoeLFkehncmM1ErVrPU-ABzXwQJHIXkR91f1UniK8rSdOmsC3b6ZGbh-ripJaHoiNiSeX50E5MLvTf_1O3i3QxQ7lF1oVJz6dLwwLYEj-VzE8zMTBLMPCSyzee87sTgkxc66i4H2sdeV4pjbpNCZ3aQ2JL50Va70BK9CpwyoxwoUSh0wYBYSkIjre4&anchor-ms=20000&execute-ms=15000&cb=kby9e9w4cj7d' because it violates the following Content Security Policy directive: "frame-src 'none'".
+
+Source: https://www.gstatic.com/
+Line: 0
+-----------------------
+Level: Error
+Message: [Report Only] Refused to frame 'https://www.google.com/recaptcha/enterprise/anchor?ar=1&k=6LdLLIMbAAAAAIl-KLj9p1ePhM-4LCCDbjtJLqRO&co=aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbTo0NDM.&hl=en&v=Lu6n5xwy2ghvnPNo3IxkhcCb&size=normal&s=v2eYtbimieeOViKrWPnsBp5S8JV4JJ0gJFT4MSrd4nKzEdI8BWXb-u1OUXmiMnroCaRzMsPMk_0Cph8ymLvdbSV3PH6Kausu1rBe-qoeLFkehncmM1ErVrPU-ABzXwQJHIXkR91f1UniK8rSdOmsC3b6ZGbh-ripJaHoiNiSeX50E5MLvTf_1O3i3QxQ7lF1oVJz6dLwwLYEj-VzE8zMTBLMPCSyzee87sTgkxc66i4H2sdeV4pjbpNCZ3aQ2JL50Va70BK9CpwyoxwoUSh0wYBYSkIjre4&anchor-ms=20000&execute-ms=15000&cb=kby9e9w4cj7d' because it violates the following Content Security Policy directive: "frame-src 'none'".
+
+Source: https://www.gstatic.com/
+Line: 0
+-----------------------
+Level: Warn
+Message: An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+Source: https://www.google.com/recaptcha/enterprise/anchor?ar=1&k=6LdLLIMbAAAAAIl-KLj9p1ePhM-4LCCDbjtJLqRO&co=aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbTo0NDM.&hl=en&v=Lu6n5xwy2ghvnPNo3IxkhcCb&size=normal&s=v2eYtbimieeOViKrWPnsBp5S8JV4JJ0gJFT4MSrd4nKzEdI8BWXb-u1OUXmiMnroCaRzMsPMk_0Cph8ymLvdbSV3PH6Kausu1rBe-qoeLFkehncmM1ErVrPU-ABzXwQJHIXkR91f1UniK8rSdOmsC3b6ZGbh-ripJaHoiNiSeX50E5MLvTf_1O3i3QxQ7lF1oVJz6dLwwLYEj-VzE8zMTBLMPCSyzee87sTgkxc66i4H2sdeV4pjbpNCZ3aQ2JL50Va70BK9CpwyoxwoUSh0wYBYSkIjre4&anchor-ms=20000&execute-ms=15000&cb=kby9e9w4cj7d
+Line: 0
+-----------------------
+Level: Info
+Message: [Report Only] Refused to execute inline event handler because it violates the following Content Security Policy directive: "script-src 'none'". Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present.
+
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 4
+-----------------------
+Level: Error
+Message: Uncaught ReferenceError: solveSimpleChallenge is not defined
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 4
+-----------------------
+Level: Error
+Message: [Report Only] Refused to frame 'https://www.google.com/recaptcha/enterprise/bframe?hl=en&v=Lu6n5xwy2ghvnPNo3IxkhcCb&k=6LdLLIMbAAAAAIl-KLj9p1ePhM-4LCCDbjtJLqRO&bft=0dAFcWeA56OxQEroRmrYqvdTAepwAioKvogTsZYdwBDBT2qf8JXrzuQ49fDDi3UFrxSFpjTgokm5zVR7bU6FNOtmgRfQvPCeHotw' because it violates the following Content Security Policy directive: "frame-src 'none'".
+
+Source: https://www.gstatic.com/
+Line: 0
+-----------------------
+Level: Error
+Message: [Report Only] Refused to frame 'https://www.google.com/recaptcha/enterprise/bframe?hl=en&v=Lu6n5xwy2ghvnPNo3IxkhcCb&k=6LdLLIMbAAAAAIl-KLj9p1ePhM-4LCCDbjtJLqRO&bft=0dAFcWeA56OxQEroRmrYqvdTAepwAioKvogTsZYdwBDBT2qf8JXrzuQ49fDDi3UFrxSFpjTgokm5zVR7bU6FNOtmgRfQvPCeHotw' because it violates the following Content Security Policy directive: "frame-src 'none'".
+
+Source: https://www.gstatic.com/
+Line: 0
+-----------------------
+Level: Warn
+Message: An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+Source: https://www.google.com/recaptcha/enterprise/bframe?hl=en&v=Lu6n5xwy2ghvnPNo3IxkhcCb&k=6LdLLIMbAAAAAIl-KLj9p1ePhM-4LCCDbjtJLqRO&bft=0dAFcWeA56OxQEroRmrYqvdTAepwAioKvogTsZYdwBDBT2qf8JXrzuQ49fDDi3UFrxSFpjTgokm5zVR7bU6FNOtmgRfQvPCeHotw
+Line: 0
+-----------------------
+Level: Error
+Message: [Report Only] Refused to send form data to 'https://www.google.com/sorry/index' because it violates the following Content Security Policy directive: "form-action 'none'".
+
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 14
+-----------------------
+Level: Error
+Message: [Report Only] Refused to send form data to 'https://www.google.com/sorry/index' because it violates the following Content Security Policy directive: "form-action 'none'".
+
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 14
+-----------------------
+Level: Error
+Message: [Report Only] Refused to send form data to 'https://www.google.com/sorry/index' because it violates the following Content Security Policy directive: "form-action 'none'".
+
+Source: https://www.google.com/sorry/index?continue=https://www.google.com/search%3Fq%3Dcopilot%2Bfo%2BVisual%2BStudio%26oq%3Dcopilot%2Bfo%2BVisual%2BStudio%26gs_lcrp%3DEgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgkIBRAAGA0YgAQyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCQgJEAAYDRiABNIBCDg2NjlqMGo0qAIAsAIB%26sourceid%3Dchrome%26ie%3DUTF-8%26sei%3DmPe5aKD5BrDR2roP_qDG8Ak&q=EgTLYIhtGJjv58UGIjDW3gmqT7hGEa2LxPIBf_ZfHe0QjplES3Lgetq2c-d-QBqJqEqHUKEm_o4xlquYeE8yAVJaAUM
+Line: 14
+-----------------------
+Level: Warn
+Message: Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('https://www.google.com').
+Source: https://www.youtube.com/s/player/79e70f61/www-widgetapi.vflset/www-widgetapi.js
+Line: 196
+-----------------------
+Level: Error
+Message: Access to font at 'file:///E:/CEF/assets/fonts/InterVariable.ttf' from origin 'null' has been blocked by CORS policy: Cross origin requests are only supported for protocol schemes: chrome, chrome-extension, chrome-untrusted, client, data, http, https, isolated-app.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 1
+-----------------------
+Level: Warn
+Message: A preload for 'file:///E:/CEF/assets/fonts/InterVariable.ttf' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------
+Level: Error
+Message: Access to fetch at 'https://ipapi.co/json/' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------
+Level: Warn
+Message: The resource file:///E:/CEF/assets/fonts/InterVariable.ttf was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------
+Level: Info
+Message: LegacyDataMixin will be applied to all legacy elements.
+Set `_legacyUndefinedCheck: true` on element class to enable.
+Source: https://www.youtube.com/s/_/ytmainappweb/_/js/k=ytmainappweb.kevlar_base.en_US.ot2sUDIDV-M.es5.O/am=AAAAAg/d=0/br=1/rs=AGKMywGgJoHxK8SAhZpe9p6uJF9_uDC9eQ
+Line: 9452
+-----------------------
+Level: Error
+Message: Blocked script execution in 'about:blank' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.
+Source: https://www.youtube.com/s/_/ytmainappweb/_/js/k=ytmainappweb.kevlar_base.en_US.ot2sUDIDV-M.es5.O/am=AAAAAg/d=0/br=1/rs=AGKMywGgJoHxK8SAhZpe9p6uJF9_uDC9eQ
+Line: 13531
+-----------------------
+Level: Info
+Message: LegacyDataMixin will be applied to all legacy elements.
+Set `_legacyUndefinedCheck: true` on element class to enable.
+Source: https://www.youtube.com/s/_/ytmainappweb/_/js/k=ytmainappweb.kevlar_base.en_US.ot2sUDIDV-M.es5.O/am=AAAAAg/d=0/br=1/rs=AGKMywGgJoHxK8SAhZpe9p6uJF9_uDC9eQ
+Line: 9452
+-----------------------
+Level: Error
+Message: Blocked script execution in 'about:blank' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.
+Source: https://www.youtube.com/s/_/ytmainappweb/_/js/k=ytmainappweb.kevlar_base.en_US.ot2sUDIDV-M.es5.O/am=AAAAAg/d=0/br=1/rs=AGKMywGgJoHxK8SAhZpe9p6uJF9_uDC9eQ
+Line: 13531
+-----------------------
+Level: Info
+Message: Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+Source: https://www.youtube.com/
+Line: 0
+-----------------------
+Level: Error
+Message: Access to font at 'file:///E:/CEF/assets/fonts/InterVariable.ttf' from origin 'null' has been blocked by CORS policy: Cross origin requests are only supported for protocol schemes: chrome, chrome-extension, chrome-untrusted, client, data, http, https, isolated-app.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 1
+-----------------------
+Level: Warn
+Message: A preload for 'file:///E:/CEF/assets/fonts/InterVariable.ttf' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------
+Level: Error
+Message: Access to fetch at 'https://ipapi.co/json/' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------
+Level: Warn
+Message: The resource file:///E:/CEF/assets/fonts/InterVariable.ttf was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------
+Level: Debug
+Message: Main._createAppUI: 21.80712890625 ms
+Source: devtools://devtools/bundled/entrypoints/main/main.js
+Line: 1
+-----------------------
+Level: Debug
+Message: Main._showAppUI: 97.6611328125 ms
+Source: devtools://devtools/bundled/entrypoints/main/main.js
+Line: 1
+-----------------------
+Level: Debug
+Message: Main._initializeTarget: 110.806884765625 ms
+Source: devtools://devtools/bundled/entrypoints/main/main.js
+Line: 1
+-----------------------
+Level: Debug
+Message: Main._lateInitialization: 0.803955078125 ms
+Source: devtools://devtools/bundled/entrypoints/main/main.js
+Line: 1
+-----------------------
+Level: Warn
+Message: The resource file:///E:/CEF/assets/fonts/InterVariable.ttf was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+Source: file:///E:/CEF/assets/pages/home.html
+Line: 0
+-----------------------

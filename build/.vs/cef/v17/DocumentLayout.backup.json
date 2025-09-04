@@ -1,0 +1,44 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\CEF\\build\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{0A37DA28-916A-3BD3-B064-8FEF7DC3C67B}|tests\\cefclient\\cefclient.vcxproj|E:\\CEF\\tests\\cefclient\\browser\\main_context_impl.cc||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "main_context_impl.cc",
+              "DocumentMoniker": "E:\\CEF\\tests\\cefclient\\browser\\main_context_impl.cc",
+              "RelativeDocumentMoniker": "..\\tests\\cefclient\\browser\\main_context_impl.cc",
+              "ToolTip": "E:\\CEF\\tests\\cefclient\\browser\\main_context_impl.cc",
+              "RelativeToolTip": "..\\tests\\cefclient\\browser\\main_context_impl.cc",
+              "ViewState": "AgIAAF0BAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-09-04T20:57:18.967Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
