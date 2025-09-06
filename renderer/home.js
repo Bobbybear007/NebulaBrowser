@@ -29,6 +29,9 @@ const greetingTitleEl   = document.getElementById('greeting');
 const editToolbar       = document.getElementById('editToolbar');
 const saveEditBtn       = document.getElementById('saveEditBtn');
 const cancelEditBtn     = document.getElementById('cancelEditBtn');
+const toggleShowGreeting = document.getElementById('toggleShowGreeting');
+const toggleShowBookmarks= document.getElementById('toggleShowBookmarks');
+const toggleShowGlance   = document.getElementById('toggleShowGlance');
 let selectedIcon       = initialIcons[0];
 let availableIcons     = initialIcons;
 let currentIconSetKey  = 'material';
@@ -552,13 +555,21 @@ function computeGreeting(d = new Date()) {
 }
 
 function startClock() {
-  const tick = () => {
+  const format = { hour: 'numeric', minute: '2-digit', hour12: true };
+  const update = () => {
     const now = new Date();
     if (greetingEl) greetingEl.textContent = computeGreeting(now);
-    if (clockEl) clockEl.textContent = now.toLocaleTimeString([], { hour12: true });
+    if (clockEl) clockEl.textContent = now.toLocaleTimeString([], format);
   };
-  tick();
-  setInterval(tick, 1000);
+  // Initial draw
+  update();
+  // Align updates to the start of each minute
+  const now = new Date();
+  const delay = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+  setTimeout(() => {
+    update();
+    setInterval(update, 60000);
+  }, delay);
 }
 
 // Unit helpers
@@ -762,8 +773,15 @@ function setEditMode(on) {
   greetY: Number(localStorage.getItem('nebula-home-greeting-y') || 12),
       searchY: Number(localStorage.getItem('nebula-home-search-y') || 22),
       bmY: Number(localStorage.getItem('nebula-home-bookmarks-y') || 40),
-      corner: localStorage.getItem('nebula-home-glance-corner') || 'br'
+      corner: localStorage.getItem('nebula-home-glance-corner') || 'br',
+      showGreeting: localStorage.getItem('nebula-show-greeting') !== 'false',
+      showBookmarks: localStorage.getItem('nebula-show-bookmarks') !== 'false',
+      showGlance: localStorage.getItem('nebula-show-glance') !== 'false'
     };
+    // Initialize toggles to snapshot values
+    if (toggleShowGreeting) toggleShowGreeting.checked = snapshot.showGreeting;
+    if (toggleShowBookmarks) toggleShowBookmarks.checked = snapshot.showBookmarks;
+    if (toggleShowGlance) toggleShowGlance.checked = snapshot.showGlance;
   } else {
     snapshot = null;
   }
@@ -776,28 +794,53 @@ if (editBtn) {
 function vhFromPx(px) { return (px / window.innerHeight) * 100; }
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
+// Visibility helpers
+function applyVisibilityFromStorage() {
+  const showGreeting = localStorage.getItem('nebula-show-greeting') !== 'false';
+  const showBookmarks = localStorage.getItem('nebula-show-bookmarks') !== 'false';
+  const showGlance = localStorage.getItem('nebula-show-glance') !== 'false';
+  if (greetingEl) greetingEl.classList.toggle('is-hidden', !showGreeting);
+  if (topSitesEl) topSitesEl.classList.toggle('is-hidden', !showBookmarks);
+  if (glanceEl) glanceEl.classList.toggle('is-hidden', !showGlance);
+}
+
+applyVisibilityFromStorage();
+
 function makeDragY(el, storageKey, cssVar) {
   if (!el) return;
-  let startY = 0; let startTop = 0; let dragging = false;
+  let startY = 0; let startTopVh = 0; let dragging = false;
+  // Cache geometry at drag start for consistent clamping in px
+  let startRectTopPx = 0; let elHeightPx = 0; const MARGIN_PX = 12;
   const onDown = (ev) => {
     if (!editMode) return; dragging = true;
-    startY = (ev.touches ? ev.touches[0].clientY : ev.clientY);
-    // current computed var
+    const p = ev.touches ? ev.touches[0] : ev;
+    startY = p.clientY;
+    // current computed var (in vh)
     const current = Number((getComputedStyle(document.documentElement).getPropertyValue(cssVar) || '0vh').replace('vh',''));
-    startTop = isNaN(current) ? 0 : current;
+    startTopVh = isNaN(current) ? 0 : current;
+    // snapshot element geometry
+    const rect = el.getBoundingClientRect();
+    startRectTopPx = rect.top;
+    elHeightPx = rect.height;
     ev.preventDefault();
   };
   const onMove = (ev) => {
     if (!dragging) return;
-    const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
-    const deltaPx = y - startY;
-    const deltaVh = vhFromPx(deltaPx);
-    const next = clamp(startTop + deltaVh, 0, 90);
-    document.documentElement.style.setProperty(cssVar, `${next}vh`);
+    const p = ev.touches ? ev.touches[0] : ev;
+    const deltaPx = p.clientY - startY;
+    // Clamp so the element stays within the viewport with a small margin
+    const minTopPx = MARGIN_PX;
+    const maxTopPx = Math.max(minTopPx, window.innerHeight - MARGIN_PX - elHeightPx);
+    const desiredTopPx = startRectTopPx + deltaPx;
+    const clampedTopPx = clamp(desiredTopPx, minTopPx, maxTopPx);
+    const clampedDeltaPx = clampedTopPx - startRectTopPx;
+    const deltaVh = vhFromPx(clampedDeltaPx);
+    const nextVh = startTopVh + deltaVh;
+    document.documentElement.style.setProperty(cssVar, `${nextVh}vh`);
   };
   const onUp = () => {
     if (!dragging) return; dragging = false;
-  // Don't persist here; only on Save. Values still applied via CSS var.
+    // Don't persist here; only on Save. Values still applied via CSS var.
   };
   el.addEventListener('mousedown', onDown);
   el.addEventListener('touchstart', onDown, { passive:false });
@@ -862,6 +905,54 @@ makeDragGlance(glanceEl);
 // Restore greeting to Y-only drag
 makeDragY(greetingTitleEl, 'nebula-home-greeting-y', '--home-greeting-y');
 
+// Keep draggable blocks within viewport on resize
+function keepVisibleWithinViewport() {
+  const root = document.documentElement;
+  const adjust = (el, cssVar) => {
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const MARGIN_PX = 12;
+    const minTopPx = MARGIN_PX;
+    const maxTopPx = Math.max(minTopPx, window.innerHeight - MARGIN_PX - rect.height);
+    let topPx = rect.top;
+    if (topPx < minTopPx || topPx > maxTopPx) {
+      const currentVh = Number((getComputedStyle(root).getPropertyValue(cssVar) || '0vh').replace('vh','')) || 0;
+      // Compute how far to move (px) to bring within range, then convert to vh and adjust var
+      const targetTopPx = clamp(topPx, minTopPx, maxTopPx);
+      const deltaPx = targetTopPx - topPx;
+      const nextVh = currentVh + vhFromPx(deltaPx);
+      root.style.setProperty(cssVar, `${nextVh}vh`);
+    }
+  };
+  adjust(greetingTitleEl, '--home-greeting-y');
+  adjust(searchContainerEl, '--home-search-y');
+  adjust(topSitesEl, '--home-bookmarks-y');
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(keepVisibleWithinViewport, 80);
+});
+
+// Toggle handlers (search cannot be hidden)
+function bindVisibilityToggles() {
+  if (toggleShowGreeting) toggleShowGreeting.addEventListener('change', () => {
+    const val = toggleShowGreeting.checked;
+    if (greetingEl) greetingEl.classList.toggle('is-hidden', !val);
+  });
+  if (toggleShowBookmarks) toggleShowBookmarks.addEventListener('change', () => {
+    const val = toggleShowBookmarks.checked;
+    if (topSitesEl) topSitesEl.classList.toggle('is-hidden', !val);
+  });
+  if (toggleShowGlance) toggleShowGlance.addEventListener('change', () => {
+    const val = toggleShowGlance.checked;
+    if (glanceEl) glanceEl.classList.toggle('is-hidden', !val);
+  });
+}
+
+bindVisibilityToggles();
+
 // Save/Cancel handlers
 if (saveEditBtn) saveEditBtn.addEventListener('click', () => {
   // Persist current CSS variable values and pending corner
@@ -874,11 +965,17 @@ if (saveEditBtn) saveEditBtn.addEventListener('click', () => {
     localStorage.setItem('nebula-home-greeting-y', String(gy));
     localStorage.setItem('nebula-home-search-y', String(sy));
     localStorage.setItem('nebula-home-bookmarks-y', String(by));
+  // Persist visibility
+  if (toggleShowGreeting) localStorage.setItem('nebula-show-greeting', String(!!toggleShowGreeting.checked));
+  if (toggleShowBookmarks) localStorage.setItem('nebula-show-bookmarks', String(!!toggleShowBookmarks.checked));
+  if (toggleShowGlance) localStorage.setItem('nebula-show-glance', String(!!toggleShowGlance.checked));
   } catch {}
   const corner = glanceEl?.dataset?.pendingCorner || localStorage.getItem(HOME_GLANCE_CORNER_KEY) || 'br';
   try { localStorage.setItem(HOME_GLANCE_CORNER_KEY, corner); } catch {}
   if (glanceEl) delete glanceEl.dataset.pendingCorner;
   setEditMode(false);
+  // Re-apply from saved storage to ensure consistent state after exiting edit mode
+  applyVisibilityFromStorage();
 });
 
 if (cancelEditBtn) cancelEditBtn.addEventListener('click', () => {
@@ -896,4 +993,15 @@ if (cancelEditBtn) cancelEditBtn.addEventListener('click', () => {
     applyHomeLayoutPrefs();
   }
   setEditMode(false);
+  // Revert visibility to snapshot
+  if (snapshot) {
+    if (greetingEl) greetingEl.classList.toggle('is-hidden', !snapshot.showGreeting);
+    if (topSitesEl) topSitesEl.classList.toggle('is-hidden', !snapshot.showBookmarks);
+    if (glanceEl) glanceEl.classList.toggle('is-hidden', !snapshot.showGlance);
+    if (toggleShowGreeting) toggleShowGreeting.checked = snapshot.showGreeting;
+    if (toggleShowBookmarks) toggleShowBookmarks.checked = snapshot.showBookmarks;
+    if (toggleShowGlance) toggleShowGlance.checked = snapshot.showGlance;
+  } else {
+    applyVisibilityFromStorage();
+  }
 });

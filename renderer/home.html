@@ -62,11 +62,11 @@
   <!-- At a glance widget -->
   <aside class="glance" aria-live="polite">
     <div class="glance-card">
-      <div class="glance-title">At a glance</div>
+      <div class="glance-title">At A Glance</div>
       <div class="glance-grid">
         <div class="glance-tile">
           <div class="glance-label">Time</div>
-          <div id="clock" class="glance-value">--:--:--</div>
+          <div id="clock" class="glance-value">--:--</div>
         </div>
         <div class="glance-tile">
           <div class="glance-label">Weather</div>
@@ -78,6 +78,18 @@
 
   <!-- Edit mode toolbar -->
   <div id="editToolbar" class="edit-toolbar" hidden>
+    <label style="display:flex;align-items:center;gap:6px;margin-right:8px;">
+      <input type="checkbox" id="toggleShowGreeting" checked>
+      <span>Show greeting</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;margin-right:8px;">
+      <input type="checkbox" id="toggleShowBookmarks" checked>
+      <span>Show bookmarks</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;margin-right:12px;">
+      <input type="checkbox" id="toggleShowGlance" checked>
+      <span>Show At a Glance</span>
+    </label>
     <button id="cancelEditBtn" class="btn secondary" aria-label="Cancel layout edits">Cancel</button>
     <button id="saveEditBtn" class="btn primary" aria-label="Save layout edits">Save</button>
   </div>
