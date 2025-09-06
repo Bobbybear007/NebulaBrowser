@@ -409,6 +409,26 @@
             <input type="radio" name="layout" value="compact">
             <span>Compact View</span>
           </label>
+          <hr style="opacity:.2; margin:10px 0;">
+          <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+            <label style="display:flex; align-items:center; gap:10px;">
+              <span style="min-width:160px;">Search Y position</span>
+              <input type="range" id="home-search-y" min="5" max="85" step="1" value="22">
+              <span id="home-search-y-val" style="opacity:.8; width:48px; text-align:right;">22vh</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:10px;">
+              <span style="min-width:160px;">Top Sites Y position</span>
+              <input type="range" id="home-bookmarks-y" min="10" max="90" step="1" value="40">
+              <span id="home-bookmarks-y-val" style="opacity:.8; width:48px; text-align:right;">40vh</span>
+            </label>
+          </div>
+          <div style="margin-top:8px;">
+            <div style="margin-bottom:6px;">At a glance corner</div>
+            <label style="margin-right:12px;"><input type="radio" name="home-glance-corner" value="br" checked> Bottom‑Right</label>
+            <label style="margin-right:12px;"><input type="radio" name="home-glance-corner" value="bl"> Bottom‑Left</label>
+            <label style="margin-right:12px;"><input type="radio" name="home-glance-corner" value="tr"> Top‑Right</label>
+            <label style="margin-right:12px;"><input type="radio" name="home-glance-corner" value="tl"> Top‑Left</label>
+          </div>
         </div>
         </div>
 

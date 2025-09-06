@@ -12,6 +12,7 @@
 </head>
 <body>
   <div class="home-container">
+  <button id="editLayoutBtn" class="edit-btn" aria-pressed="false" title="Edit layout">Edit</button>
     <!-- Dynamic greeting replaces the large logo for a cleaner hero look -->
     <h1 id="greeting" class="greeting-title">Welcome</h1>
 
@@ -74,6 +75,12 @@
       </div>
     </div>
   </aside>
+
+  <!-- Edit mode toolbar -->
+  <div id="editToolbar" class="edit-toolbar" hidden>
+    <button id="cancelEditBtn" class="btn secondary" aria-label="Cancel layout edits">Cancel</button>
+    <button id="saveEditBtn" class="btn primary" aria-label="Save layout edits">Save</button>
+  </div>
 
   <!-- Popup for adding a bookmark -->
   <div id="addPopup" class="popup hidden">

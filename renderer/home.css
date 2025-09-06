@@ -14,6 +14,9 @@
   --primary: #7B2EFF;
   --accent: #00C6FF;
   --text: #E0E0E0;
+  --home-greeting-y: 12vh; /* user adjustable */
+  --home-search-y: 22vh; /* user adjustable */
+  --home-bookmarks-y: 40vh; /* user adjustable */
 }
 
 /* Base reset */
@@ -46,6 +49,20 @@ body, html {
   padding: 4rem 2rem 2rem;
 }
 
+.edit-btn { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:6px 10px; cursor:pointer; backdrop-filter: blur(6px); }
+.edit-btn[aria-pressed="true"] { background: rgba(255,255,255,0.22); }
+.edit-mode .edit-btn { display:none; }
+.edit-mode .greeting-title, .edit-mode .search-container, .edit-mode .top-sites-card, .edit-mode .glance { outline: 2px dashed rgba(255,255,255,0.35); outline-offset: 4px; cursor: grab; }
+.edit-mode .glance.dragging { cursor: grabbing; }
+
+/* Edit toolbar */
+.edit-toolbar { position: fixed; top: 16px; right: 16px; display:none; gap:10px; z-index:6; backdrop-filter: blur(8px); background: rgba(8,10,16,0.5); border:1px solid rgba(255,255,255,0.15); padding:8px 10px; border-radius:12px; box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); }
+.edit-mode .edit-toolbar { display:flex; }
+.edit-toolbar[hidden] { display: none !important; }
+.edit-toolbar .btn { min-width:90px; padding:8px 12px; border-radius:8px; border:1px solid transparent; color:#fff; cursor:pointer; }
+.edit-toolbar .btn.primary { background: linear-gradient(135deg, var(--accent), var(--primary)); }
+.edit-toolbar .btn.secondary { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.2); }
+
 /* Greeting hero title */
 .greeting-title {
   font-size: clamp(2rem, 5vw, 3.5rem);
@@ -54,6 +71,8 @@ body, html {
   color: #cfd4ff;
   text-shadow: 0 4px 22px rgba(0,0,0,0.6);
   margin-bottom: 1.25rem;
+  position: relative;
+  top: var(--home-greeting-y);
 }
 
 
@@ -86,6 +105,8 @@ body, html {
   margin-bottom: 1.5rem;
   width: 550px; /* Increased width for the new button */
   max-width: 95vw;
+  position: relative;
+  top: var(--home-search-y);
 }
 
 /* Search bar */
@@ -215,6 +236,8 @@ body, html {
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 18px 50px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
   backdrop-filter: blur(6px);
+  position: relative;
+  top: var(--home-bookmarks-y);
 }
 .top-sites-header { 
   display:flex; align-items:center; justify-content:space-between; 
@@ -456,11 +479,18 @@ body[data-theme="dark"] .bookmark .material-symbols-outlined,
 
 /* At a glance widget */
 .glance { position: fixed; right: 22px; bottom: 22px; }
+.glance.pos-br { right:22px; bottom:22px; left:auto; top:auto; }
+.glance.pos-bl { left:22px; bottom:22px; right:auto; top:auto; }
+.glance.pos-tr { right:22px; top:22px; left:auto; bottom:auto; }
+.glance.pos-tl { left:22px; top:22px; right:auto; bottom:auto; }
 .glance-card { 
   min-width: 280px; background: rgba(12,16,26,0.55); border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px; padding: 1rem; box-shadow: 0 14px 40px -18px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,0.05);
   backdrop-filter: blur(8px);
 }
+.glance { transition: transform 0.06s linear; will-change: transform; }
+.glance.dragging { transform: translate3d(var(--drag-x, 0px), var(--drag-y, 0px), 0) scale(1.02); }
+.glance.dragging .glance-card { box-shadow: 0 24px 60px -24px rgba(0,0,0,.9), 0 0 0 2px rgba(255,255,255,.12) inset; }
 .glance-title { font-size: .95rem; color: #dfe3ff; opacity: .9; margin-bottom: .65rem; }
 .glance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
 .glance-tile { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: .6rem .75rem; text-align:left; }

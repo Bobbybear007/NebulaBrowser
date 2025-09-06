@@ -21,6 +21,14 @@ const greetingEl        = document.getElementById('greeting');
 const resetTopSitesBtn  = document.getElementById('resetTopSites');
 const clockEl           = document.getElementById('clock');
 const weatherEl         = document.getElementById('weather');
+const glanceEl          = document.querySelector('.glance');
+const searchContainerEl = document.querySelector('.search-container');
+const topSitesEl        = document.querySelector('.top-sites-card');
+const editBtn           = document.getElementById('editLayoutBtn');
+const greetingTitleEl   = document.getElementById('greeting');
+const editToolbar       = document.getElementById('editToolbar');
+const saveEditBtn       = document.getElementById('saveEditBtn');
+const cancelEditBtn     = document.getElementById('cancelEditBtn');
 let selectedIcon       = initialIcons[0];
 let availableIcons     = initialIcons;
 let currentIconSetKey  = 'material';
@@ -677,4 +685,190 @@ window.addEventListener('storage', (e) => {
   if (e && e.key === WEATHER_UNIT_KEY) {
     loadWeather();
   }
+});
+
+// ---- Home layout preferences ----
+const HOME_SEARCH_Y_KEY = 'nebula-home-search-y';
+const HOME_BOOKMARKS_Y_KEY = 'nebula-home-bookmarks-y';
+const HOME_GLANCE_CORNER_KEY = 'nebula-home-glance-corner';
+const HOME_GREETING_Y_KEY = 'nebula-home-greeting-y';
+
+function applyHomeLayoutPrefs() {
+  try {
+    const root = document.documentElement;
+  const greetY = Number(localStorage.getItem(HOME_GREETING_Y_KEY) || 12);
+    const searchY = Number(localStorage.getItem(HOME_SEARCH_Y_KEY) || 22);
+    const bmY = Number(localStorage.getItem(HOME_BOOKMARKS_Y_KEY) || 40);
+  root.style.setProperty('--home-greeting-y', `${greetY}vh`);
+    root.style.setProperty('--home-search-y', `${searchY}vh`);
+    root.style.setProperty('--home-bookmarks-y', `${bmY}vh`);
+    const corner = localStorage.getItem(HOME_GLANCE_CORNER_KEY) || 'br';
+    if (glanceEl) {
+      glanceEl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+      glanceEl.classList.add(`pos-${corner}`);
+    }
+  } catch (e) { console.warn('applyHomeLayoutPrefs failed', e); }
+}
+
+applyHomeLayoutPrefs();
+
+// React to settings updates via storage or host messages
+window.addEventListener('storage', (e) => {
+  if (!e) return;
+  if ([HOME_SEARCH_Y_KEY, HOME_BOOKMARKS_Y_KEY, HOME_GLANCE_CORNER_KEY].includes(e.key)) {
+    applyHomeLayoutPrefs();
+  }
+});
+
+if (window.electronAPI && typeof window.electronAPI.on === 'function') {
+  window.electronAPI.on('settings-update', (payload) => {
+    if (!payload) return;
+    if (payload.searchY != null) document.documentElement.style.setProperty('--home-search-y', `${payload.searchY}vh`);
+    if (payload.bookmarksY != null) document.documentElement.style.setProperty('--home-bookmarks-y', `${payload.bookmarksY}vh`);
+    if (payload.glanceCorner && glanceEl) {
+      glanceEl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+      glanceEl.classList.add(`pos-${payload.glanceCorner}`);
+    }
+  });
+}
+
+// ---- Edit mode drag support ----
+let editMode = false;
+let snapshot = null; // stores values before edits
+function setEditMode(on) {
+  editMode = !!on;
+  document.body.classList.toggle('edit-mode', editMode);
+  if (editBtn) editBtn.setAttribute('aria-pressed', String(editMode));
+  if (editToolbar) editToolbar.hidden = !editMode;
+  if (editMode) {
+    // Take a snapshot of current persisted values
+    snapshot = {
+      greetY: Number(localStorage.getItem('nebula-home-greeting-y') || 12),
+      searchY: Number(localStorage.getItem('nebula-home-search-y') || 22),
+      bmY: Number(localStorage.getItem('nebula-home-bookmarks-y') || 40),
+      corner: localStorage.getItem('nebula-home-glance-corner') || 'br'
+    };
+  } else {
+    snapshot = null;
+  }
+}
+
+if (editBtn) {
+  editBtn.addEventListener('click', () => setEditMode(!editMode));
+}
+
+function vhFromPx(px) { return (px / window.innerHeight) * 100; }
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+function makeDragY(el, storageKey, cssVar) {
+  if (!el) return;
+  let startY = 0; let startTop = 0; let dragging = false;
+  const onDown = (ev) => {
+    if (!editMode) return; dragging = true;
+    startY = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    // current computed var
+    const current = Number((getComputedStyle(document.documentElement).getPropertyValue(cssVar) || '0vh').replace('vh',''));
+    startTop = isNaN(current) ? 0 : current;
+    ev.preventDefault();
+  };
+  const onMove = (ev) => {
+    if (!dragging) return;
+    const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    const deltaPx = y - startY;
+    const deltaVh = vhFromPx(deltaPx);
+    const next = clamp(startTop + deltaVh, 0, 90);
+    document.documentElement.style.setProperty(cssVar, `${next}vh`);
+  };
+  const onUp = () => {
+    if (!dragging) return; dragging = false;
+  // Don't persist here; only on Save. Values still applied via CSS var.
+  };
+  el.addEventListener('mousedown', onDown);
+  el.addEventListener('touchstart', onDown, { passive:false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive:false });
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchend', onUp);
+}
+
+function makeDragGlance(el) {
+  if (!el) return;
+  let dragging = false; let start;
+  const onDown = (ev) => {
+    if (!editMode) return; dragging = true; el.classList.add('dragging');
+    const p = ev.touches?ev.touches[0]:ev; start = { x:p.clientX, y:p.clientY };
+    // reset any prior drag offsets
+    el.style.setProperty('--drag-x','0px'); el.style.setProperty('--drag-y','0px');
+    ev.preventDefault();
+  };
+  const onMove = (ev) => {
+    if (!dragging) return; const p = ev.touches?ev.touches[0]:ev;
+    const dx = p.clientX - start.x; const dy = p.clientY - start.y;
+    el.style.setProperty('--drag-x', `${dx}px`);
+    el.style.setProperty('--drag-y', `${dy}px`);
+  };
+  const onUp = (ev) => {
+    if (!dragging) return; dragging = false; el.classList.remove('dragging');
+    el.style.removeProperty('--drag-x'); el.style.removeProperty('--drag-y');
+    const p = ev.changedTouches?ev.changedTouches[0]:ev;
+    const x = p.clientX; const y = p.clientY;
+    // snap to nearest corner
+    const left = x < window.innerWidth/2;
+    const top = y < window.innerHeight/2;
+    const corner = top ? (left ? 'tl' : 'tr') : (left ? 'bl' : 'br');
+    // Only store corner on Save; temporarily apply class for preview
+    if (glanceEl) {
+      glanceEl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+      glanceEl.classList.add(`pos-${corner}`);
+      // Stash pending corner choice on the element during edit mode
+      glanceEl.dataset.pendingCorner = corner;
+    }
+  };
+  el.addEventListener('mousedown', onDown);
+  el.addEventListener('touchstart', onDown, { passive:false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive:false });
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchend', onUp);
+}
+
+makeDragY(searchContainerEl, 'nebula-home-search-y', '--home-search-y');
+makeDragY(topSitesEl, 'nebula-home-bookmarks-y', '--home-bookmarks-y');
+makeDragGlance(glanceEl);
+makeDragY(greetingTitleEl, 'nebula-home-greeting-y', '--home-greeting-y');
+
+// Save/Cancel handlers
+if (saveEditBtn) saveEditBtn.addEventListener('click', () => {
+  // Persist current CSS variable values and pending corner
+  const rootStyle = getComputedStyle(document.documentElement);
+  const getVh = (v) => Math.round(Number((v || '0vh').replace('vh','')));
+  const gy = getVh(rootStyle.getPropertyValue('--home-greeting-y'));
+  const sy = getVh(rootStyle.getPropertyValue('--home-search-y'));
+  const by = getVh(rootStyle.getPropertyValue('--home-bookmarks-y'));
+  try {
+    localStorage.setItem('nebula-home-greeting-y', String(gy));
+    localStorage.setItem('nebula-home-search-y', String(sy));
+    localStorage.setItem('nebula-home-bookmarks-y', String(by));
+  } catch {}
+  const corner = glanceEl?.dataset?.pendingCorner || localStorage.getItem(HOME_GLANCE_CORNER_KEY) || 'br';
+  try { localStorage.setItem(HOME_GLANCE_CORNER_KEY, corner); } catch {}
+  if (glanceEl) delete glanceEl.dataset.pendingCorner;
+  setEditMode(false);
+});
+
+if (cancelEditBtn) cancelEditBtn.addEventListener('click', () => {
+  // Revert CSS vars and glance corner to snapshot
+  if (snapshot) {
+    document.documentElement.style.setProperty('--home-greeting-y', `${snapshot.greetY}vh`);
+    document.documentElement.style.setProperty('--home-search-y', `${snapshot.searchY}vh`);
+    document.documentElement.style.setProperty('--home-bookmarks-y', `${snapshot.bmY}vh`);
+    if (glanceEl) {
+      glanceEl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+      glanceEl.classList.add(`pos-${snapshot.corner}`);
+      delete glanceEl.dataset.pendingCorner;
+    }
+  } else {
+    applyHomeLayoutPrefs();
+  }
+  setEditMode(false);
 });

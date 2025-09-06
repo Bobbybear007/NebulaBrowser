@@ -8,6 +8,9 @@ const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('status-text');
 const TAB_STORAGE_KEY = 'nebula-settings-active-tab';
 const WEATHER_UNIT_KEY = 'nebula-weather-unit'; // 'auto' | 'c' | 'f'
+const HOME_SEARCH_Y_KEY = 'nebula-home-search-y'; // number (vh)
+const HOME_BOOKMARKS_Y_KEY = 'nebula-home-bookmarks-y'; // number (vh)
+const HOME_GLANCE_CORNER_KEY = 'nebula-home-glance-corner'; // 'br'|'bl'|'tr'|'tl'
 
 function showStatus(message) {
   if (statusText && statusDiv) {
@@ -116,6 +119,54 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }));
   } catch (e) { console.warn('Weather unit setup failed', e); }
+
+  // Home layout controls
+  try {
+    const searchRange = document.getElementById('home-search-y');
+    const searchVal = document.getElementById('home-search-y-val');
+    const bmRange = document.getElementById('home-bookmarks-y');
+    const bmVal = document.getElementById('home-bookmarks-y-val');
+    const cornerRadios = document.querySelectorAll('input[name="home-glance-corner"]');
+
+    const initNum = (key, def, input, label) => {
+      const v = Number(localStorage.getItem(key) || def);
+      if (input) input.value = String(v);
+      if (label) label.textContent = v + 'vh';
+      return v;
+    };
+    initNum(HOME_SEARCH_Y_KEY, 22, searchRange, searchVal);
+    initNum(HOME_BOOKMARKS_Y_KEY, 40, bmRange, bmVal);
+    const storedCorner = localStorage.getItem(HOME_GLANCE_CORNER_KEY) || 'br';
+    cornerRadios.forEach(r => r.checked = (r.value === storedCorner));
+
+    const notify = () => {
+      if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+        window.electronAPI.sendToHost('settings-update', {
+          searchY: Number(localStorage.getItem(HOME_SEARCH_Y_KEY) || 22),
+          bookmarksY: Number(localStorage.getItem(HOME_BOOKMARKS_Y_KEY) || 40),
+          glanceCorner: localStorage.getItem(HOME_GLANCE_CORNER_KEY) || 'br'
+        });
+      }
+    };
+
+    if (searchRange) searchRange.addEventListener('input', () => {
+      const val = Number(searchRange.value);
+      searchVal.textContent = val + 'vh';
+      localStorage.setItem(HOME_SEARCH_Y_KEY, String(val));
+      notify();
+    });
+    if (bmRange) bmRange.addEventListener('input', () => {
+      const val = Number(bmRange.value);
+      bmVal.textContent = val + 'vh';
+      localStorage.setItem(HOME_BOOKMARKS_Y_KEY, String(val));
+      notify();
+    });
+    cornerRadios.forEach(r => r.addEventListener('change', () => {
+      const val = document.querySelector('input[name="home-glance-corner"]:checked')?.value || 'br';
+      localStorage.setItem(HOME_GLANCE_CORNER_KEY, val);
+      notify();
+    }));
+  } catch (e) { console.warn('Home layout control setup failed', e); }
 });
 
 // Tabs: simple controller
