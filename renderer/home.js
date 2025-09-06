@@ -17,6 +17,10 @@ const iconGrid         = document.getElementById('iconGrid');
 const selectedIconInput= document.getElementById('selectedIcon');
 const iconCategoryNav  = document.getElementById('iconCategoryNav');
 const useFaviconCheckbox = document.getElementById('useFavicon');
+const greetingEl        = document.getElementById('greeting');
+const resetTopSitesBtn  = document.getElementById('resetTopSites');
+const clockEl           = document.getElementById('clock');
+const weatherEl         = document.getElementById('weather');
 let selectedIcon       = initialIcons[0];
 let availableIcons     = initialIcons;
 let currentIconSetKey  = 'material';
@@ -148,6 +152,19 @@ function renderBookmarks() {
   addBox.onclick = () => addPopup.classList.remove('hidden');
 
   bookmarkList.appendChild(addBox);
+}
+
+// Reset Top Sites (bookmarks) to empty state
+if (resetTopSitesBtn) {
+  resetTopSitesBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!bookmarks.length) return;
+    const yes = confirm('Clear all Top Sites?');
+    if (!yes) return;
+    bookmarks = [];
+    await saveBookmarks();
+    renderBookmarks();
+  });
 }
 
 // draw the icon‐grid, filtering by the search term
@@ -516,3 +533,148 @@ function setupSectionObserver() {
     renderBookmarks();
   }, 100);
 })();
+
+// ---- Greeting / Clock / Weather widgets ----
+function computeGreeting(d = new Date()) {
+  const h = d.getHours();
+  if (h < 5) return 'Good Night';
+  if (h < 12) return 'Good Morning';
+  if (h < 18) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
+function startClock() {
+  const tick = () => {
+    const now = new Date();
+    if (greetingEl) greetingEl.textContent = computeGreeting(now);
+    if (clockEl) clockEl.textContent = now.toLocaleTimeString([], { hour12: true });
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+// Unit helpers
+const WEATHER_UNIT_KEY = 'nebula-weather-unit'; // 'auto' | 'c' | 'f'
+const COUNTRIES_FAHRENHEIT = new Set(['US','BS','KY','LR','PW','FM','MH']);
+function useFahrenheit() {
+  try {
+    const pref = localStorage.getItem(WEATHER_UNIT_KEY);
+    if (pref === 'c') return false; if (pref === 'f') return true;
+  } catch {}
+  try {
+    const loc = Intl.DateTimeFormat().resolvedOptions().locale || navigator.language || '';
+    const region = loc.split('-')[1];
+    return region ? COUNTRIES_FAHRENHEIT.has(region.toUpperCase()) : false;
+  } catch { return false; }
+}
+
+function getPosition(timeoutMs = 6000) {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) return reject(new Error('geolocation unavailable'));
+    const opts = { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60_000 };
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      err => reject(err),
+      opts
+    );
+  });
+}
+
+async function geoByIP() {
+  // Try a couple of CORS-friendly IP services
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const j = await r.json();
+      if (j && typeof j.latitude === 'number' && typeof j.longitude === 'number') {
+        return { lat: j.latitude, lon: j.longitude, city: j.city, country: j.country_code };
+      }
+    }
+  } catch {}
+  try {
+    const r = await fetch('https://ipwho.is/');
+    if (r.ok) {
+      const j = await r.json();
+      if (j && j.success && j.latitude && j.longitude) {
+        return { lat: j.latitude, lon: j.longitude, city: j.city, country: j.country_code }; 
+      }
+    }
+  } catch {}
+  return null;
+}
+
+async function fetchOpenMeteo(lat, lon, fahrenheit) {
+  const tUnit = fahrenheit ? 'fahrenheit' : 'celsius';
+  const wUnit = fahrenheit ? 'mph' : 'kmh';
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit=${tUnit}&windspeed_unit=${wUnit}&timezone=auto`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('weather fetch failed');
+  const j = await r.json();
+  return {
+    temp: j?.current?.temperature_2m,
+    wind: j?.current?.wind_speed_10m,
+    code: j?.current?.weather_code,
+    tUnit: fahrenheit ? '°F' : '°C',
+    wUnit: fahrenheit ? 'mph' : 'km/h',
+  };
+}
+
+function codeToSummary(code) {
+  // Minimal Open‑Meteo WMO code mapping
+  const m = new Map([
+    [0,'Clear'], [1,'Mainly clear'], [2,'Partly cloudy'], [3,'Cloudy'],
+    [45,'Fog'], [48,'Rime fog'], [51,'Drizzle'], [53,'Drizzle'], [55,'Drizzle'],
+    [56,'Freezing drizzle'], [57,'Freezing drizzle'],
+    [61,'Rain'], [63,'Rain'], [65,'Rain'],
+    [66,'Freezing rain'], [67,'Freezing rain'],
+    [71,'Snow'], [73,'Snow'], [75,'Snow'], [77,'Snow grains'],
+    [80,'Showers'], [81,'Showers'], [82,'Heavy showers'],
+    [85,'Snow showers'], [86,'Snow showers'],
+    [95,'Thunderstorm'], [96,'Storm'], [99,'Severe storm']
+  ]);
+  return m.get(Number(code)) || 'Weather';
+}
+
+async function loadWeather() {
+  if (!weatherEl) return;
+  // Prefer an app-provided IPC source if available
+  try {
+    if (window.electronAPI && typeof window.electronAPI.invoke === 'function') {
+      const res = await window.electronAPI.invoke('get-weather');
+      if (res && (res.temp || res.summary)) {
+        const summaryText = res.summary || '';
+        const tempText = typeof res.temp === 'number' ? `${Math.round(res.temp)}°` : '';
+        const windText = res.wind ? ` · Wind ${Math.round(res.wind)} ${res.wUnit || 'km/h'}` : '';
+        weatherEl.textContent = `${tempText}${summaryText ? ' · ' + summaryText : ''}${windText}`.trim() || '—';
+        return;
+      }
+    }
+  } catch (e) { console.warn('IPC weather failed', e); }
+
+  try {
+    // 1) Try browser geolocation
+    let loc = null;
+    try { loc = await getPosition(); } catch {}
+    if (!loc) loc = await geoByIP();
+    if (!loc) throw new Error('no location');
+    const f = useFahrenheit();
+    const data = await fetchOpenMeteo(loc.lat, loc.lon, f);
+    const summary = codeToSummary(data.code);
+    const temp = typeof data.temp === 'number' ? Math.round(data.temp) : data.temp;
+    const wind = typeof data.wind === 'number' ? Math.round(data.wind) : data.wind;
+    weatherEl.textContent = `${temp}${data.tUnit} · Wind ${wind} ${data.wUnit}`;
+  } catch (err) {
+    console.warn('Weather fetch failed', err);
+    weatherEl.textContent = '—';
+  }
+}
+
+startClock();
+loadWeather();
+
+// Refresh weather when unit preference changes
+window.addEventListener('storage', (e) => {
+  if (e && e.key === WEATHER_UNIT_KEY) {
+    loadWeather();
+  }
+});

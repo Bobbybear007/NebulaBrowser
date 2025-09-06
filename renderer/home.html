@@ -12,7 +12,11 @@
 </head>
 <body>
   <div class="home-container">
-    <div class="logo">
+    <!-- Dynamic greeting replaces the large logo for a cleaner hero look -->
+    <h1 id="greeting" class="greeting-title">Welcome</h1>
+
+    <!-- Retain logo for branding but keep it subtle/optional -->
+    <div class="logo" aria-hidden="true" style="display:none">
       <img src="../assets/images/Logos/Nebula-Logo.svg" class="logo-img">
       <div class="logo-text">Nebula Browser</div>
     </div>
@@ -42,10 +46,34 @@
       </div>
     </div>
 
-    <div class="bookmarks" id="bookmarkList">
-      <!-- Bookmarks dynamically inserted here -->
-    </div>
+    <!-- Top Sites card -->
+    <section class="top-sites-card">
+      <header class="top-sites-header">
+        <h2>Bookmarks</h2>
+        <button id="resetTopSites" class="link-btn" title="Clear bookmarks">Reset</button>
+      </header>
+      <div class="bookmarks" id="bookmarkList">
+        <!-- Bookmarks dynamically inserted here -->
+      </div>
+    </section>
   </div>
+
+  <!-- At a glance widget -->
+  <aside class="glance" aria-live="polite">
+    <div class="glance-card">
+      <div class="glance-title">At a glance</div>
+      <div class="glance-grid">
+        <div class="glance-tile">
+          <div class="glance-label">Time</div>
+          <div id="clock" class="glance-value">--:--:--</div>
+        </div>
+        <div class="glance-tile">
+          <div class="glance-label">Weather</div>
+          <div id="weather" class="glance-value">Fetching…</div>
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <!-- Popup for adding a bookmark -->
   <div id="addPopup" class="popup hidden">

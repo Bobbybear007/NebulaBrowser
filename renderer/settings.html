@@ -290,6 +290,17 @@
           <button id="clear-data-btn">Clear Data</button>
         </div>
         <p class="note">Settings are stored locally on this device.</p>
+
+        <div class="setting-group">
+          <h3>Weather</h3>
+          <fieldset class="weather-units" style="display:flex; flex-direction:column; gap:8px; border:1px solid rgba(255,255,255,0.15); padding:10px; border-radius:8px;">
+            <legend style="padding:0 6px; opacity:.85;">Temperature units</legend>
+            <label><input type="radio" name="weather-unit" id="weather-unit-auto" value="auto" checked> Auto (based on locale)</label>
+            <label><input type="radio" name="weather-unit" id="weather-unit-c" value="c"> Celsius (°C)</label>
+            <label><input type="radio" name="weather-unit" id="weather-unit-f" value="f"> Fahrenheit (°F)</label>
+          </fieldset>
+          <p class="note">Affects the weather card on the Home page.</p>
+        </div>
         <div class="debug-info" id="debug-info">Loading debug info...</div>
       </section>
 

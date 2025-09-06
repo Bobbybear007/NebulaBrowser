@@ -39,11 +39,21 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* Center content vertically */
-  height: 100vh;
+  justify-content: flex-start;
+  min-height: 100vh;
   overflow-y: auto;
   text-align: center;
-  padding: 2rem;
+  padding: 4rem 2rem 2rem;
+}
+
+/* Greeting hero title */
+.greeting-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #cfd4ff;
+  text-shadow: 0 4px 22px rgba(0,0,0,0.6);
+  margin-bottom: 1.25rem;
 }
 
 
@@ -73,7 +83,7 @@ body, html {
 .search-container {
   display: flex;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   width: 550px; /* Increased width for the new button */
   max-width: 95vw;
 }
@@ -195,6 +205,27 @@ body, html {
   max-width: 800px;
 }
 
+/* Top Sites card wrapper */
+.top-sites-card { 
+  width: min(900px, 96vw);
+  margin-top: 1.25rem;
+  padding: 1rem 1rem 1.25rem;
+  border-radius: 16px;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(255,255,255,0.06), rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 50px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(6px);
+}
+.top-sites-header { 
+  display:flex; align-items:center; justify-content:space-between; 
+  margin-bottom: 0.75rem; padding: 0 0.25rem;
+}
+.top-sites-header h2 { font-size: 1rem; font-weight: 700; color: #dfe3ff; opacity: .9; }
+.link-btn { 
+  background: none; border: none; color: #9aa8ff; cursor: pointer; font-size: .9rem; 
+}
+.link-btn:hover { color: #c7d0ff; text-decoration: underline; }
+
 /* Individual bookmark tile */
 .bookmark {
   background: rgba(255,255,255,0.05);
@@ -309,7 +340,7 @@ body[data-theme="dark"] .bookmark .material-symbols-outlined,
   justify-content: center;
   width: 100px;
   height: 100px;
-  border-radius: 50%;
+  border-radius: 20px;
   font-size: 2rem;
   background: rgba(255,255,255,0.05);
   border: 1px dashed rgba(255,255,255,0.3);
@@ -421,6 +452,23 @@ body[data-theme="dark"] .bookmark .material-symbols-outlined,
 
 #saveBookmarkBtn:hover {
   background: #6a24e5;
+}
+
+/* At a glance widget */
+.glance { position: fixed; right: 22px; bottom: 22px; }
+.glance-card { 
+  min-width: 280px; background: rgba(12,16,26,0.55); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; padding: 1rem; box-shadow: 0 14px 40px -18px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(8px);
+}
+.glance-title { font-size: .95rem; color: #dfe3ff; opacity: .9; margin-bottom: .65rem; }
+.glance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.glance-tile { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: .6rem .75rem; text-align:left; }
+.glance-label { font-size: .7rem; color: #b8c1ff; opacity: .85; margin-bottom: .25rem; }
+.glance-value { font-size: 1.05rem; letter-spacing: .3px; color:#fff; }
+
+@media (max-width: 700px) {
+  .glance { position: static; margin-top: 1rem; }
 }
 
 /* Color Palette */

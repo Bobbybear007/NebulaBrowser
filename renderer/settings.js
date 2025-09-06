@@ -7,6 +7,7 @@ let clearBtn = document.getElementById('clear-data-btn');
 const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('status-text');
 const TAB_STORAGE_KEY = 'nebula-settings-active-tab';
+const WEATHER_UNIT_KEY = 'nebula-weather-unit'; // 'auto' | 'c' | 'f'
 
 function showStatus(message) {
   if (statusText && statusDiv) {
@@ -98,6 +99,23 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Weather unit controls
+  try {
+    const stored = localStorage.getItem(WEATHER_UNIT_KEY) || 'auto';
+    const radios = document.querySelectorAll('input[name="weather-unit"]');
+    radios.forEach(r => r.checked = (r.value === stored));
+    radios.forEach(radio => radio.addEventListener('change', () => {
+      const val = document.querySelector('input[name="weather-unit"]:checked')?.value || 'auto';
+      localStorage.setItem(WEATHER_UNIT_KEY, val);
+      showStatus(`Weather units set to ${val === 'c' ? 'Celsius' : val === 'f' ? 'Fahrenheit' : 'Auto'}`);
+      // Hint home page to refresh weather if it listens to storage events
+      try { window.dispatchEvent(new StorageEvent('storage', { key: WEATHER_UNIT_KEY, newValue: val })); } catch {}
+      if (window.electronAPI && typeof window.electronAPI.sendToHost === 'function') {
+        window.electronAPI.sendToHost('settings-update', { weatherUnit: val });
+      }
+    }));
+  } catch (e) { console.warn('Weather unit setup failed', e); }
 });
 
 // Tabs: simple controller

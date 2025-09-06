@@ -7,14 +7,13 @@
     "start": "electron .",
     "dist": "electron-builder",
     "run": "electron ."
-
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-  "electron": "^37.3.1",
+    "electron": "^37.3.1",
     "electron-builder": "^23.0.0",
     "electron-nightly": "^39.0.0-nightly.20250811"
   },
