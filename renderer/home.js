@@ -707,6 +707,14 @@ function applyHomeLayoutPrefs() {
       glanceEl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
       glanceEl.classList.add(`pos-${corner}`);
     }
+  // Position edit controls at the opposite horizontal side of glance (X-only move)
+  const oppositeHorizontal = (c) => ({ br:'bl', bl:'br', tr:'tl', tl:'tr' }[c] || 'tr');
+  const editCorner = oppositeHorizontal(corner);
+    [editBtn, editToolbar].forEach(ctrl => {
+      if (!ctrl) return;
+      ctrl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+      ctrl.classList.add(`pos-${editCorner}`);
+    });
   } catch (e) { console.warn('applyHomeLayoutPrefs failed', e); }
 }
 
@@ -728,6 +736,14 @@ if (window.electronAPI && typeof window.electronAPI.on === 'function') {
     if (payload.glanceCorner && glanceEl) {
       glanceEl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
       glanceEl.classList.add(`pos-${payload.glanceCorner}`);
+      // Update edit controls to opposite horizontal side (X-only)
+      const oppositeHorizontal = (c) => ({ br:'bl', bl:'br', tr:'tl', tl:'tr' }[c] || 'tr');
+      const editCorner = oppositeHorizontal(payload.glanceCorner);
+      [editBtn, editToolbar].forEach(ctrl => {
+        if (!ctrl) return;
+        ctrl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+        ctrl.classList.add(`pos-${editCorner}`);
+      });
     }
   });
 }
@@ -743,7 +759,7 @@ function setEditMode(on) {
   if (editMode) {
     // Take a snapshot of current persisted values
     snapshot = {
-      greetY: Number(localStorage.getItem('nebula-home-greeting-y') || 12),
+  greetY: Number(localStorage.getItem('nebula-home-greeting-y') || 12),
       searchY: Number(localStorage.getItem('nebula-home-search-y') || 22),
       bmY: Number(localStorage.getItem('nebula-home-bookmarks-y') || 40),
       corner: localStorage.getItem('nebula-home-glance-corner') || 'br'
@@ -823,6 +839,14 @@ function makeDragGlance(el) {
       // Stash pending corner choice on the element during edit mode
       glanceEl.dataset.pendingCorner = corner;
     }
+    // Also move edit controls to opposite corner during preview
+    const opposite = (c) => ({ br:'tl', bl:'tr', tr:'bl', tl:'br' }[c] || 'tl');
+    const editCorner = opposite(corner);
+    [editBtn, editToolbar].forEach(ctrl => {
+      if (!ctrl) return;
+      ctrl.classList.remove('pos-br','pos-bl','pos-tr','pos-tl');
+      ctrl.classList.add(`pos-${editCorner}`);
+    });
   };
   el.addEventListener('mousedown', onDown);
   el.addEventListener('touchstart', onDown, { passive:false });
@@ -835,6 +859,7 @@ function makeDragGlance(el) {
 makeDragY(searchContainerEl, 'nebula-home-search-y', '--home-search-y');
 makeDragY(topSitesEl, 'nebula-home-bookmarks-y', '--home-bookmarks-y');
 makeDragGlance(glanceEl);
+// Restore greeting to Y-only drag
 makeDragY(greetingTitleEl, 'nebula-home-greeting-y', '--home-greeting-y');
 
 // Save/Cancel handlers
@@ -859,7 +884,7 @@ if (saveEditBtn) saveEditBtn.addEventListener('click', () => {
 if (cancelEditBtn) cancelEditBtn.addEventListener('click', () => {
   // Revert CSS vars and glance corner to snapshot
   if (snapshot) {
-    document.documentElement.style.setProperty('--home-greeting-y', `${snapshot.greetY}vh`);
+  document.documentElement.style.setProperty('--home-greeting-y', `${snapshot.greetY}vh`);
     document.documentElement.style.setProperty('--home-search-y', `${snapshot.searchY}vh`);
     document.documentElement.style.setProperty('--home-bookmarks-y', `${snapshot.bmY}vh`);
     if (glanceEl) {

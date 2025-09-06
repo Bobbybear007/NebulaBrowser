@@ -14,7 +14,7 @@
   --primary: #7B2EFF;
   --accent: #00C6FF;
   --text: #E0E0E0;
-  --home-greeting-y: 12vh; /* user adjustable */
+  --home-greeting-y: 12vh; /* fixed vertical baseline */
   --home-search-y: 22vh; /* user adjustable */
   --home-bookmarks-y: 40vh; /* user adjustable */
 }
@@ -49,7 +49,7 @@ body, html {
   padding: 4rem 2rem 2rem;
 }
 
-.edit-btn { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:6px 10px; cursor:pointer; backdrop-filter: blur(6px); }
+.edit-btn { position: fixed; top: 16px; right: 16px; z-index: 5; background: rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:6px 10px; cursor:pointer; backdrop-filter: blur(6px); }
 .edit-btn[aria-pressed="true"] { background: rgba(255,255,255,0.22); }
 .edit-mode .edit-btn { display:none; }
 .edit-mode .greeting-title, .edit-mode .search-container, .edit-mode .top-sites-card, .edit-mode .glance { outline: 2px dashed rgba(255,255,255,0.35); outline-offset: 4px; cursor: grab; }
@@ -59,6 +59,12 @@ body, html {
 .edit-toolbar { position: fixed; top: 16px; right: 16px; display:none; gap:10px; z-index:6; backdrop-filter: blur(8px); background: rgba(8,10,16,0.5); border:1px solid rgba(255,255,255,0.15); padding:8px 10px; border-radius:12px; box-shadow: 0 12px 30px -14px rgba(0,0,0,.7); }
 .edit-mode .edit-toolbar { display:flex; }
 .edit-toolbar[hidden] { display: none !important; }
+
+/* Corner helpers for edit controls */
+.edit-btn.pos-br, .edit-toolbar.pos-br { right:16px; bottom:16px; left:auto; top:auto; }
+.edit-btn.pos-bl, .edit-toolbar.pos-bl { left:16px; bottom:16px; right:auto; top:auto; }
+.edit-btn.pos-tr, .edit-toolbar.pos-tr { right:16px; top:16px; left:auto; bottom:auto; }
+.edit-btn.pos-tl, .edit-toolbar.pos-tl { left:16px; top:16px; right:auto; bottom:auto; }
 .edit-toolbar .btn { min-width:90px; padding:8px 12px; border-radius:8px; border:1px solid transparent; color:#fff; cursor:pointer; }
 .edit-toolbar .btn.primary { background: linear-gradient(135deg, var(--accent), var(--primary)); }
 .edit-toolbar .btn.secondary { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.2); }
