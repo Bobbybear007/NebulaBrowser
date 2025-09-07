@@ -1,4 +1,6 @@
 [
+  "https://www.youtube.com/",
+  "https://www.youtube.com/?themeRefresh=1",
   "https://github.com/sessions/two-factor/webauthn",
   "https://github.com/sessions/social/google/confirm",
   "https://github.com/sessions/social/google/initiate?return_to=",

@@ -466,7 +466,8 @@ body[data-theme="dark"] .bookmark .material-symbols-outlined,
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99;
+  /* Ensure popup overlays search bar and other UI (search-container has z-index:300) */
+  z-index: 1005;
   backdrop-filter: blur(4px); /* add subtle blur behind the overlay */
 }
 
