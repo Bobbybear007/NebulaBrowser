@@ -16,6 +16,7 @@ A customizable and privacy-focused web browser built with Electron. Nebula is de
 *   **Performance Monitoring:** Built-in tools to monitor app performance and force GC when needed.
 *   **GPU Acceleration Control:** Diagnostics and safe fallbacks to troubleshoot rendering issues.
 *   **Themes & Customization:** Built-in themes and live editor to craft your own.
+*   **Plugins:** Extend Nebula with custom or community plugins via a simple plugin API.
 *   **Cross-Platform:** Runs on Windows, macOS, and Linux.
 
 [**Learn more about Nebula's features.**](documentation/FEATURES.md)
@@ -72,6 +73,7 @@ An overview of the project's structure. For a more detailed explanation, please 
 -   `gpu-config.js` & `gpu-fallback.js`: Modules for managing GPU settings.
 -   `assets/`: Contains static assets.
 -   `documentation/`: Contains additional documentation.
+-   `plugins/`: Sample plugins and scaffolding for developing your own.
 
 ## Core Concepts
 
@@ -105,3 +107,4 @@ This project is licensed under the MIT License. [Read More](documentation/MIT.md
 * [Core Concepts](documentation/CORE_CONCEPTS.md)
 * [Contributing Guide](documentation/CONTRIBUTING.md)
 * [OAuth Debug](documentation/oauth-debug.md)
+* [Plugins Guide](README-PLUGINS.md)
