@@ -332,3 +332,90 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// -----------------------------
+// Plugins management (Settings)
+// -----------------------------
+async function loadPluginsUI() {
+  const listEl = document.getElementById('plugins-list');
+  const reloadAllBtn = document.getElementById('plugins-reload-all');
+  if (!listEl) return;
+  // Load list
+  let items = [];
+  try {
+    items = (ipc ? await ipc.invoke('plugins-list') : []) || [];
+  } catch (e) {
+    console.warn('plugins-list failed', e);
+  }
+  listEl.innerHTML = '';
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'plugin-item';
+    empty.textContent = 'No plugins found';
+    listEl.appendChild(empty);
+  } else {
+    for (const p of items) {
+      const row = document.createElement('div');
+      row.className = 'plugin-item';
+      row.setAttribute('role', 'listitem');
+      row.innerHTML = `
+        <div class="plugin-meta">
+          <div class="plugin-title">${escapeHtml(p.name)} <span style="opacity:.7;font-weight:400">v${escapeHtml(p.version)}</span></div>
+          <div class="plugin-desc">${escapeHtml(p.description || '')}</div>
+          <div class="plugin-desc" style="opacity:.6; font-size:.85em;">${escapeHtml(p.dir)}</div>
+        </div>
+        <div class="plugin-actions">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" class="plugin-enable" ${p.enabled ? 'checked' : ''}>
+            <span>${p.enabled ? 'Enabled' : 'Disabled'}</span>
+          </label>
+          <span class="spacer"></span>
+          <button class="plugin-reload">Reload</button>
+        </div>`;
+      // Wire actions
+      const enableInput = row.querySelector('input.plugin-enable');
+      const labelSpan = row.querySelector('label span');
+      enableInput.addEventListener('change', async () => {
+        const enabled = enableInput.checked;
+        try {
+          if (ipc) await ipc.invoke('plugins-set-enabled', { id: p.id, enabled });
+          labelSpan.textContent = enabled ? 'Enabled' : 'Disabled';
+          showStatus(`${p.name}: ${enabled ? 'Enabled' : 'Disabled'}.`);
+        } catch (e) {
+          console.error('Failed to toggle plugin', p.id, e);
+          enableInput.checked = !enabled;
+          labelSpan.textContent = enableInput.checked ? 'Enabled' : 'Disabled';
+          showStatus('Failed updating plugin');
+        }
+      });
+      const reloadBtn = row.querySelector('button.plugin-reload');
+      reloadBtn.addEventListener('click', async () => {
+        try {
+          if (ipc) await ipc.invoke('plugins-reload', { id: p.id });
+          showStatus(`${p.name} reloaded.`);
+        } catch (e) {
+          console.error('Plugin reload failed', e);
+          showStatus('Reload failed');
+        }
+      });
+      listEl.appendChild(row);
+    }
+  }
+  if (reloadAllBtn) reloadAllBtn.onclick = async () => {
+    try { if (ipc) await ipc.invoke('plugins-reload', {}); showStatus('Plugins reloaded.'); } catch { showStatus('Reload failed'); }
+  };
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+}
+
+// Load when settings page shows Plugins tab for the first time
+window.addEventListener('DOMContentLoaded', () => {
+  const tabBtn = document.getElementById('tab-plugins');
+  if (!tabBtn) return;
+  let loaded = false;
+  const ensureLoad = () => { if (!loaded) { loaded = true; loadPluginsUI(); } };
+  tabBtn.addEventListener('click', ensureLoad);
+  if (location.hash === '#plugins') ensureLoad();
+});

@@ -15,6 +15,7 @@
         <button class="tab-link active" role="tab" aria-selected="true" aria-controls="panel-general" id="tab-general" data-tab="general">General</button>
         <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-appearance" id="tab-appearance" data-tab="appearance">Appearance</button>
         <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-history" id="tab-history" data-tab="history">History</button>
+  <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-plugins" id="tab-plugins" data-tab="plugins">Plugins</button>
         <button class="tab-link" role="tab" aria-selected="false" aria-controls="panel-about" id="tab-about" data-tab="about">About</button>
       </nav>
     </aside>
@@ -193,6 +194,21 @@
             <button id="clear-site-history-btn">Clear Site History</button>
             <button id="add-test-history-btn">Add Test History</button>
           </div>
+        </div>
+      </section>
+
+      <!-- Plugins Panel -->
+      <section class="tab-panel" id="panel-plugins" role="tabpanel" aria-labelledby="tab-plugins">
+        <h2>Plugins</h2>
+        <div class="customization-group">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <button id="plugins-reload-all">Reload Plugins</button>
+            <span class="note">Changes to renderer preloads may require app restart.</span>
+          </div>
+        </div>
+        <div class="customization-group">
+          <h3>Installed</h3>
+          <div id="plugins-list" class="plugins-list" role="list"></div>
         </div>
       </section>
 

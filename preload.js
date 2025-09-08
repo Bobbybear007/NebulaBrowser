@@ -131,3 +131,26 @@ contextBridge.exposeInMainWorld('downloadsAPI', {
   onDone: (handler) => ipcRenderer.on('downloads-done', (_e, payload) => handler(payload)),
   onCleared: (handler) => ipcRenderer.on('downloads-cleared', handler)
 });
+
+// ----------------------------------------
+// Plugin renderer preloads
+// ----------------------------------------
+// We request a list of absolute file paths from main and require() them here.
+// Each file can optionally call contextBridge.exposeInMainWorld to add APIs.
+(async () => {
+  try {
+    const preloads = await ipcRenderer.invoke('plugins-get-renderer-preloads');
+    if (Array.isArray(preloads)) {
+      for (const p of preloads) {
+        try {
+          // eslint-disable-next-line global-require, import/no-dynamic-require
+          require(p);
+        } catch (e) {
+          console.error('[Plugins] Failed to load renderer preload:', p, e);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Plugins] No renderer preloads:', e);
+  }
+})();

@@ -1101,6 +1101,15 @@ function updateZoomUI() {
 function zoomIn()  { ipcRenderer.invoke('zoom-in').then(updateZoomUI); }
 function zoomOut() { ipcRenderer.invoke('zoom-out').then(updateZoomUI); }
 
+// Optional: sample plugin demo hook (safe if plugin missing)
+try {
+  if (window.sampleHello && typeof window.sampleHello.onHello === 'function') {
+    window.sampleHello.onHello((payload) => {
+      console.log('[Sample Plugin] Hello message:', payload);
+    });
+  }
+} catch {}
+
 // Utility: close the menu when interacting with a given element (e.g., webview)
 function attachCloseMenuOnInteract(el) {
   if (!el) return;

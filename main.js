@@ -6,11 +6,13 @@ const os = require('os');
 const PerformanceMonitor = require('./performance-monitor');
 const GPUFallback = require('./gpu-fallback');
 const GPUConfig = require('./gpu-config');
+const PluginManager = require('./plugin-manager');
 
 // Initialize performance monitoring and GPU management
 const perfMonitor = new PerformanceMonitor();
 const gpuFallback = new GPUFallback();
 const gpuConfig = new GPUConfig();
+const pluginManager = new PluginManager();
 
 // Try to enable WebAuthn/platform authenticator features early.
 // This helps Chromium expose platform authenticators (Touch ID / built-in) where supported.
@@ -241,6 +243,9 @@ function createWindow(startUrl) {
     } catch (e) {
       console.warn('WebAuthn diagnostic injection skipped:', e);
     }
+
+  // After the first load, let plugins know a window exists
+  try { pluginManager.emit('window-created', win); } catch {}
   });
 
   // Renderer manages history; no main-process recording here
@@ -304,6 +309,14 @@ function configureSessionsAsync() {
 app.whenReady().then(() => {
   const t0 = performance.now();
   createWindow();
+  // Initialize user plugins after app ready
+  try {
+    pluginManager.ensureUserPluginsDir();
+    pluginManager.loadAll();
+    pluginManager.emit('app-ready');
+  } catch (e) {
+    console.error('[Plugins] initialization error:', e);
+  }
   console.log('[Startup] createWindow invoked in', (performance.now() - t0).toFixed(1), 'ms after app.whenReady');
 
   // Handle GPU process crashes (still register early)
@@ -323,6 +336,10 @@ app.whenReady().then(() => {
     const defSes = session.defaultSession;
     if (mainSes) registerDownloadHandling(mainSes);
     if (defSes && defSes !== mainSes) registerDownloadHandling(defSes);
+  // Allow plugins to attach webRequest hooks
+  if (mainSes) pluginManager.applyWebRequestHandlers(mainSes);
+  if (defSes) pluginManager.applyWebRequestHandlers(defSes);
+  pluginManager.emit('session-configured', { mainSes, defSes });
   } catch (e) {
     console.warn('Failed to register download handlers:', e);
   }
@@ -750,7 +767,9 @@ function buildAndShowContextMenu(sender, params = {}) {
       }
     });
 
-    const menu = Menu.buildFromTemplate(template);
+  // Allow plugins to customize/append context menu
+  try { pluginManager.applyContextMenuContrib(template, params, sender); } catch {}
+  const menu = Menu.buildFromTemplate(template);
     const win = BrowserWindow.fromWebContents(embedder);
     if (win) menu.popup({ window: win });
   } catch (err) {
@@ -761,6 +780,24 @@ function buildAndShowContextMenu(sender, params = {}) {
 // IPC trigger (legacy / renderer-requested)
 ipcMain.handle('show-context-menu', (event, params = {}) => {
   buildAndShowContextMenu(event.sender, params);
+});
+
+// Plugins: expose renderer preload list
+ipcMain.handle('plugins-get-renderer-preloads', () => {
+  try { return pluginManager.getRendererPreloads(); } catch { return []; }
+});
+
+// Plugins: management IPC for settings UI
+ipcMain.handle('plugins-list', () => pluginManager.discoverPlugins());
+ipcMain.handle('plugins-set-enabled', async (_e, { id, enabled }) => {
+  const ok = await pluginManager.setEnabled(id, enabled);
+  // Reload to apply enable/disable (requires app reload for renderer preloads)
+  pluginManager.reload();
+  return ok;
+});
+ipcMain.handle('plugins-reload', (_e, { id } = {}) => {
+  pluginManager.reload(id);
+  return true;
 });
 
 // Automatic native context menu for any webContents (windows + webviews)

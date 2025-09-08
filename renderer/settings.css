@@ -1,3 +1,13 @@
+/* existing styles */
+
+/* Plugins panel */
+.plugins-list { display: grid; gap: 10px; }
+.plugin-item { display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.12); padding:10px; border-radius:8px; background: rgba(255,255,255,0.03); }
+.plugin-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.plugin-title { font-weight:600; }
+.plugin-desc { opacity:.8; font-size:.9em; }
+.plugin-actions { display:flex; gap:8px; align-items:center; }
+.plugin-actions .spacer { width:8px; }
 :root {
   --bg: #121418;
   --dark-blue: #0B1C2B;
