@@ -1,9 +1,0 @@
-{
-  "id": "sample-hello",
-  "name": "Sample Hello Plugin",
-  "version": "0.1.0",
-  "description": "Demonstrates Nebula plugin basics: add menu item and renderer API.",
-  "main": "main.js",
-  "rendererPreload": "renderer-preload.js",
-  "enabled": false
-}

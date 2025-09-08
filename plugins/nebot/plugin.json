@@ -1,0 +1,9 @@
+{
+  "id": "ollama-chat",
+  "name": "Nebot",
+  "version": "0.1.0",
+  "description": "Nebot: a floating chat panel that talks to a local/remote Ollama server and saves chats in the plugin folder.",
+  "main": "main.js",
+  "rendererPreload": "renderer-preload.js",
+  "enabled": true
+}
