@@ -14,6 +14,7 @@ This document explains how to build simple plugins for Nebula. The initial API i
 
 Example:
 
+```json
 {
   "id": "my-plugin",
   "name": "My Plugin",
@@ -23,6 +24,7 @@ Example:
   "rendererPreload": "renderer-preload.js",
   "enabled": true
 }
+```
 
 Fields:
 - id: Unique id. Defaults to folder name if omitted.
