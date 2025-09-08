@@ -6,12 +6,16 @@ A customizable and privacy-focused web browser built with Electron. Nebula is de
 
 ## Features
 
-*   **Privacy Control:** Easily clear your browsing data, including history, cookies, and cache.
-*   **Tab Management:** Open new tabs, and manage them efficiently.
-*   **Bookmarks:** Save your favorite sites.
-*   **History:** Keeps track of your browsing and search history.
-*   **Performance Monitoring:** Built-in tools to monitor application performance.
-*   **GPU Acceleration Control:** Advanced settings to manage GPU acceleration and troubleshoot rendering issues.
+*   **Privacy Control:** Easily clear your browsing data (history, cookies, cache, local storage, and more).
+*   **Tab Management:** Open new tabs, pop a tab out into a new window, and manage them efficiently.
+*   **Bookmarks:** Save your favorite sites with automatic backup on save.
+*   **History:** Keeps track of your browsing and search history with one-click clear.
+*   **Downloads Manager:** Track downloads, pause/resume/cancel, and open or reveal completed files.
+*   **Context Menu:** Native right‑click menu with Back/Forward/Reload, open/download links, image actions, and Inspect Element.
+*   **Auth Compatibility:** Improved OAuth/SSO & WebAuthn support (popup windows enabled where needed).
+*   **Performance Monitoring:** Built-in tools to monitor app performance and force GC when needed.
+*   **GPU Acceleration Control:** Diagnostics and safe fallbacks to troubleshoot rendering issues.
+*   **Themes & Customization:** Built-in themes and live editor to craft your own.
 *   **Cross-Platform:** Runs on Windows, macOS, and Linux.
 
 [**Learn more about Nebula's features.**](documentation/FEATURES.md)
@@ -55,6 +59,8 @@ npm run dist
 
 This will create a distributable file in the `dist` directory.
 
+Tip (Windows): If you encounter GPU issues, try starting with `start-gpu-safe.bat` to launch in a safer rendering mode.
+
 ## Project Structure
 
 An overview of the project's structure. For a more detailed explanation, please see the [Project Structure documentation](documentation/PROJECT_STRUCTURE.md).
@@ -91,7 +97,7 @@ This project is licensed under the MIT License. [Read More](documentation/MIT.md
 
 ## Documentation
 
-* [MIT Licese](documentation/MIT.md)
+* [MIT License](documentation/MIT.md)
 * [GPU Fix](documentation/GPU-FIX-README.md)
 * [Features](documentation/FEATURES.md)
 * [Customization](documentation/Customization.md)

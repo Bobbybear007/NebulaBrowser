@@ -3,6 +3,7 @@
 This document provides an in-depth look at the project's file and directory structure.
 
 -   **`main.js`**: This is the heart of the Electron application. It's the main process script that controls the application's lifecycle, creates browser windows, and handles all interactions with the operating system.
+    -   Manages native context menu, downloads, and OAuth/WebAuthn-friendly window behavior.
 
 -   **`renderer/`**: This directory contains all the client-side code and assets for the browser's user interface (the renderer process).
     -   **`index.html`**: The main HTML file that serves as the container for the browser's UI, including the tab bar, address bar, and the webview for displaying web content.
@@ -14,12 +15,14 @@ This document provides an in-depth look at the project's file and directory stru
     -   **`gpu-diagnostics.html`**: The page for displaying GPU information.
     -   **`performance.css`**: Styles for the performance monitoring page.
     -   **`icons.js`**, **`icons.json`**: Files related to managing icons within the UI.
+    -   Other pages: downloads UI and settings integrate with main-process IPC.
 
 -   **`preload.js`**: This script is a crucial part of Electron's security model. It runs in a privileged context before the renderer process's web page is loaded. It's used to selectively expose APIs from the main process to the renderer process via the `contextBridge`.
 
 -   **`performance-monitor.js`**: A Node.js module that runs in the main process to track application performance metrics like memory usage and page load times.
 
 -   **`gpu-config.js`** & **`gpu-fallback.js`**: These modules are responsible for managing GPU-related settings. `gpu-config.js` checks the system's GPU capabilities, and `gpu-fallback.js` provides mechanisms to disable or reduce GPU acceleration if problems are detected.
+    -   `start-gpu-safe.bat` starts the app with safer GPU settings on Windows.
 
 -   **`assets/`**: This directory holds all static assets.
     -   **`images/`**: Contains logos, icons, and other images used in the application.
@@ -32,5 +35,6 @@ This document provides an in-depth look at the project's file and directory stru
     -   **`bookmarks.json`**: Stores the user's bookmarks.
     -   **`site-history.json`**: Stores the user's browsing history.
     -   **`search-history.json`**: Stores the user's search history.
+    -   **`bookmarks.backup.json`**: Auto-created backup of bookmarks on save.
 
 -   **`start-gpu-safe.bat`**: A batch script for Windows users to start the application in a GPU-safe mode.

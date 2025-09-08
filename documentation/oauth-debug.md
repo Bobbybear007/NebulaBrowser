@@ -2,23 +2,22 @@
 
 ## Changes Made to Fix Google Sign-in Issues
 
-### 1. Added Proper User Agent
-- Set `useragent` attribute on all webviews to identify as Chrome browser
-- User agent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Nebula/1.0.0`
+### 1. User Agent Strategy
+- Nebula removes the default Electron token from the UA and appends `Nebula/<version>` for better compatibility while still identifying the app.
+- The UA is applied at the session level (main/default sessions) so all tabs/webviews inherit it.
+- To debug with Electron visible in UA, set environment variable `NEBULA_DEBUG_ELECTRON_UA=1` before launch.
 
-### 2. Enhanced Webview Security Configuration
-- Added `webpreferences` attribute with proper security settings
-- Enabled JavaScript and maintained web security while allowing OAuth flows
+### 2. Webview and Window Behavior
+- Webviews inherit secure defaults from `webPreferences`.
+- Popup windows opened by sites (e.g., OAuth) are allowed for `http`/`https` URLs to preserve login flows.
 
 ### 3. Session Configuration for OAuth
-- Configured session permissions for OAuth compatibility
-- Added cookie change monitoring for Google domains
-- Enhanced request headers for better OAuth compatibility
-- Added referrer policy for OAuth flows
+- Configured session permissions for OAuth compatibility.
+- Added cookie change monitoring for Google domains.
+- Enhanced request headers (Accept-Language, Accept) and `Referrer-Policy` for OAuth endpoints.
 
 ### 4. Unified Session Partitioning
-- Changed all webviews to use `persist:main` partition instead of `persist:default`
-- This ensures session data is shared across tabs for OAuth flows
+- The main window uses partition `persist:main`, and sessions are configured consistently so auth/session state is shared across tabs.
 
 ## Testing Google Sign-in
 
@@ -27,6 +26,8 @@
 3. **Click Sign In** - you should now see the Google account picker
 4. **Select your account** - should take you to password/2FA screen
 5. **Complete sign-in** - should successfully sign you in
+
+Note: POST-based navigations are not blocked or intercepted by the main process to avoid stripping request bodies.
 
 ## Debug Information
 

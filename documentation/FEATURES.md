@@ -32,6 +32,15 @@ Nebula keeps a record of your browsing and search history to help you find your 
 -   **Search History:** A list of all the searches you have made.
 -   **Clear History:** You can clear your history at any time from the settings page.
 
+### Downloads Manager
+
+Reliably download files with progress and controls.
+
+-   **Progress & State:** Each download shows received/total bytes and status.
+-   **Pause/Resume/Cancel:** Control active downloads where the server supports resuming.
+-   **Open or Reveal:** Open downloaded files directly or show them in your file manager.
+-   **Safe Filenames:** Files are saved to your OS Downloads folder with automatic de-duplication.
+
 ### Performance Monitoring
 
 Nebula includes built-in tools to help you monitor the browser's performance.
@@ -45,6 +54,22 @@ For advanced users, Nebula provides tools to manage GPU acceleration.
 
 -   **GPU Diagnostics:** View detailed information about your system's GPU and its status.
 -   **GPU Fallback:** If you experience rendering issues, you can apply a GPU fallback to use a more stable rendering path. This can help resolve visual glitches or crashes.
+
+### Native Context Menu
+
+Nebula provides a native right-click menu across pages and webviews.
+
+-   **Navigation:** Back, Forward, Reload.
+-   **Links:** Open in new tab, Download link, Open externally, Copy address.
+-   **Images:** Open in new tab, Save image as, Copy image address.
+-   **Editing:** Undo/Redo, Cut/Copy/Paste, Select All when applicable.
+-   **Developer:** Inspect Element (opens DevTools docked by default).
+
+### Authentication & Web Compatibility
+
+-   **OAuth/SSO Friendly:** Popup windows are allowed for http/https to support common login flows.
+-   **WebAuthn Diagnostics:** Platform authenticator features are enabled where supported and logged for troubleshooting.
+-   **Sturdy Navigation:** Login POST navigations are not intercepted by the main process.
 
 ### Custom Themes & Customization
 
@@ -64,3 +89,8 @@ For detailed information about creating and managing themes, see the [Customizat
 Nebula is built with Electron, allowing it to run on multiple operating systems.
 
 -   **Windows, macOS, and Linux:** Enjoy a consistent browsing experience across different platforms.
+
+### Miscellaneous
+
+-   **User Agent Strategy:** Electron token is removed from the default user agent to improve site compatibility while appending a `Nebula/x.y.z` marker. You can opt-in to include the Electron token by setting `NEBULA_DEBUG_ELECTRON_UA=1`.
+-   **Open Local Files:** Use the file picker to open `file://` URLs directly.

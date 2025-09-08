@@ -14,7 +14,8 @@ Electron applications have two types of processes: the **main process** and one 
 
 Since the main and renderer processes are separate, they need a way to communicate. This is done through Inter-Process Communication (IPC).
 
--   **`ipcMain` and `ipcRenderer`**: Electron provides the `ipcMain` and `ipcRenderer` modules for this purpose. The main process can listen for messages from the renderer process using `ipcMain.handle`, and the renderer process can send messages using `ipcRenderer.invoke`.
+-   **`ipcMain` and `ipcRenderer`**: Electron provides the `ipcMain` and `ipcRenderer` modules for this purpose. The main process listens for messages using `ipcMain.handle`, and the renderer sends messages using `ipcRenderer.invoke`.
+	-   Nebula uses IPC for features like downloads control, bookmarks/history management, performance reports, GPU diagnostics, and window controls.
 
 -   **Context Bridge and Preload Script**: To securely expose APIs from the main process to the renderer process, Electron uses a **preload script** and the **context bridge**. The `preload.js` script runs in a special environment that has access to both the `window` object of the renderer process and Node.js APIs. The `contextBridge` is used to expose specific functions from the preload script to the renderer process, ensuring that the renderer process cannot access powerful Node.js APIs directly.
 
@@ -23,3 +24,9 @@ Since the main and renderer processes are separate, they need a way to communica
 -   **Performance Monitoring**: The `performance-monitor.js` module helps track the application's performance by monitoring metrics like memory usage and page load times. This is essential for identifying and addressing performance bottlenecks.
 
 -   **GPU Configuration**: The `gpu-config.js` and `gpu-fallback.js` modules manage GPU acceleration. Electron uses the system's GPU to render content, which can significantly improve performance. However, GPU drivers can sometimes be a source of instability. These modules allow Nebula to check the GPU status and apply fallbacks (like disabling hardware acceleration) if issues are detected, ensuring a more stable experience.
+
+### Authentication & User Agent Strategy
+
+-   **Auth Flow Compatibility**: Nebula allows popup windows for http/https to preserve OAuth/SSO flows without stripping POST bodies.
+-   **WebAuthn**: Platform authenticator features are enabled where supported, with diagnostics logged to help troubleshoot availability.
+-   **User Agent**: The default Electron token is removed from the UA string to improve site compatibility while appending a `Nebula/<version>` marker.
