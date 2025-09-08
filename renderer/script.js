@@ -653,8 +653,61 @@ function renderTabs() {
     el.addEventListener('dragstart', e => {
       e.dataTransfer.setData('tabId', tab.id);
       e.dataTransfer.setData('text/plain', tab.id);
+      // Hide default ghost image; use an empty drag image
+      const ghost = document.createElement('canvas');
+      ghost.width = 1; ghost.height = 1; // 1x1 transparent pixel
+      const ctx = ghost.getContext('2d');
+      if (ctx) { ctx.clearRect(0, 0, 1, 1); }
+      e.dataTransfer.setDragImage(ghost, 0, 0);
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.dropEffect = 'move';
+      }
+      // visual lift on drag start
+      el.classList.add('tab--dragging');
+      // Store initial pointer offset to keep tab under cursor
+      const rect = el.getBoundingClientRect();
+      el._dragOffsetX = e.clientX - rect.left;
+      el._dragStartLeft = rect.left;
+      el._dragStartTop = rect.top;
     });
-    el.addEventListener('dragover', e => { e.preventDefault(); });
+    el.addEventListener('dragenter', e => {
+      // If another tab is being dragged over this one, hint before/after
+      const draggedId = (e.dataTransfer && (e.dataTransfer.getData('tabId') || e.dataTransfer.getData('text/plain'))) || null;
+      if (!draggedId || draggedId === tab.id) return;
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX;
+      const before = (x - rect.left) < rect.width / 2;
+      el.classList.toggle('tab--drop-before', before);
+      el.classList.toggle('tab--drop-after', !before);
+    });
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      // Continuously update hint side while hovering
+      const rect = el.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      el.classList.toggle('tab--drop-before', before);
+      el.classList.toggle('tab--drop-after', !before);
+    });
+    // While dragging, move the actual element to follow cursor horizontally (attach once).
+    if (!tabBarEl._dragoverAttached) {
+      tabBarEl.addEventListener('dragover', (evt) => {
+        const draggingEl = tabBarEl.querySelector('.tab.tab--dragging');
+        if (!draggingEl) return;
+        evt.preventDefault();
+        if (evt.dataTransfer) evt.dataTransfer.dropEffect = 'move';
+        const barRect = tabBarEl.getBoundingClientRect();
+        const targetX = evt.clientX - barRect.left - (draggingEl._dragOffsetX || 0);
+        // Translate relative to its current position
+        const elRect = draggingEl.getBoundingClientRect();
+        const dx = targetX - (elRect.left - barRect.left);
+        draggingEl.style.transform = `translateX(${dx}px)`;
+      });
+      tabBarEl._dragoverAttached = true;
+    }
+    el.addEventListener('dragleave', () => {
+      el.classList.remove('tab--drop-before', 'tab--drop-after');
+    });
     el.addEventListener('drop', e => {
       e.preventDefault();
       const draggedId = e.dataTransfer.getData('tabId') || e.dataTransfer.getData('text/plain');
@@ -668,9 +721,18 @@ function renderTabs() {
       const [moved] = tabs.splice(fromIndex, 1);
       const adjIndex = fromIndex < newIndex ? newIndex - 1 : newIndex;
       tabs.splice(adjIndex, 0, moved);
+      el.classList.remove('tab--drop-before', 'tab--drop-after');
+      // Reset dragging transform before re-render FLIP
+      const draggingEl = tabBarEl.querySelector('.tab.tab--dragging');
+      if (draggingEl) draggingEl.style.transform = '';
       scheduleRenderTabs();
     });
     el.addEventListener('dragend', e => {
+      // Clear dragging visual state
+      el.classList.remove('tab--dragging');
+      el.style.transform = '';
+      // Clean any lingering hints
+      el.classList.remove('tab--drop-before', 'tab--drop-after');
       if (
         e.clientX < 0 || e.clientX > window.innerWidth ||
         e.clientY < 0 || e.clientY > window.innerHeight

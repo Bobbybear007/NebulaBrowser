@@ -56,6 +56,7 @@ html, body {
   scrollbar-width: thin;            /* slimmer track */
   -webkit-backdrop-filter: blur(var(--blur));
   backdrop-filter: blur(var(--blur));
+  -webkit-app-region: no-drag; /* ensure HTML5 DnD works inside tab strip */
 }
 
 /* NAVBAR LAYOUT */
@@ -82,7 +83,7 @@ html, body {
   /* Make both the tab strip and the nav area draggable so users have a
      larger region to click-and-drag the window. Keep interactive elements
      marked as no-drag so buttons and tabs remain clickable. */
-  #tab-bar,
+  /* Keep only the nav area as a window-drag region so tabs can use HTML5 DnD */
   #nav {
     -webkit-app-region: drag;
     user-select: none;
@@ -414,6 +415,7 @@ body:has(#home-container.active) #downloads-btn {
   display: flex;
   align-items: center;
   gap: 8px;
+  -webkit-app-region: no-drag; /* allow HTML5 DnD to work */
   padding: 4px 10px; /* slimmer padding */
   margin: 0;
   height: 28px; /* reduce overall tab height */
@@ -601,6 +603,38 @@ body:has(#home-container.active) #downloads-btn {
 .tab--closing {
   animation: tab-exit 140ms ease-in both;
 }
+
+/* While dragging a tab, lift it slightly for feedback */
+.tab--dragging {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+  z-index: 5;
+  transition: none !important; /* follow cursor without lag */
+  will-change: transform;
+  cursor: grabbing;
+}
+
+/* Show an insertion hint on hovered tab and nudge it */
+.tab--drop-before,
+.tab--drop-after {
+  position: relative;
+}
+.tab--drop-before { transform: translateX(-10px); }
+.tab--drop-after  { transform: translateX(10px); }
+
+.tab--drop-before::before,
+.tab--drop-after::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-600));
+  opacity: 0.9;
+}
+.tab--drop-before::before { left: 0; }
+.tab--drop-after::after  { right: 0; }
 
 @keyframes tab-enter {
   from {
