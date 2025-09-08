@@ -40,7 +40,23 @@
     </div>
 
     <div class="nav-right">
-      <button title="Downloads">⭳</button>
+      <div class="downloads-wrapper">
+        <button id="downloads-btn" title="Downloads" aria-label="Downloads">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12"/>
+            <path d="M7 10l5 5 5-5"/>
+            <path d="M5 21h14"/>
+          </svg>
+        </button>
+        <div id="downloads-popup" class="hidden">
+          <div class="downloads-pop-header">
+            <span>Downloads</span>
+            <button id="downloads-show-all">Show all</button>
+          </div>
+          <div id="downloads-list" class="downloads-pop-list"></div>
+          <div id="downloads-empty" class="downloads-empty">No downloads</div>
+        </div>
+      </div>
       <div class="menu-wrapper">
         <button id="menu-btn">☰</button>
         <div id="menu-popup" class="hidden">

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Downloads</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="performance.css" />
+  <style>
+    body { font-family: system-ui, Segoe UI, Roboto, sans-serif; margin: 16px; color: #eee; background: #121212; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .download-list { display: flex; flex-direction: column; gap: 10px; }
+    .download-item { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
+    .file { font-weight: 600; color: #fafafa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { font-size: 12px; color: #bbb; }
+    .progress { height: 6px; background: #2a2a2a; border-radius: 4px; overflow: hidden; grid-column: 1 / -1; }
+    .bar { height: 100%; background: #3b82f6; width: 0%; transition: width .15s linear; }
+    .actions { display: flex; gap: 6px; }
+    button { background: #2b2b2b; border: 1px solid #3a3a3a; color: #eee; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+    button:hover { background: #333; }
+    .state { font-size: 12px; color: #aaa; }
+    .row { display: flex; gap: 12px; justify-content: space-between; align-items: center; }
+    .empty { color: #888; font-style: italic; padding: 20px; text-align: center; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>Downloads</h1>
+    <div>
+      <button id="clear-completed">Clear Completed</button>
+    </div>
+  </div>
+  <div id="list" class="download-list"></div>
+  <div id="empty" class="empty" style="display:none;">No downloads yet</div>
+
+  <script>
+    const api = window.downloadsAPI;
+    const listEl = document.getElementById('list');
+    const emptyEl = document.getElementById('empty');
+    const clearBtn = document.getElementById('clear-completed');
+
+    function fmtBytes(n) {
+      if (!n || n <= 0) return '0 B';
+      const u = ['B','KB','MB','GB','TB'];
+      const i = Math.floor(Math.log(n)/Math.log(1024));
+      return (n/Math.pow(1024,i)).toFixed( i===0 ? 0 : 1 ) + ' ' + u[i];
+    }
+
+    function rowHtml(d){
+      const pct = d.totalBytes > 0 ? Math.min(100, Math.round((d.receivedBytes||0) * 100 / d.totalBytes)) : 0;
+      return `
+        <div class="download-item" id="dl-${d.id}">
+          <div class="file" title="${d.filename}">${d.filename}</div>
+          <div class="actions">
+            ${d.state==='in-progress' ? `
+              <button data-act="${d.paused?'resume':'pause'}" data-id="${d.id}">${d.paused?'Resume':'Pause'}</button>
+              <button data-act="cancel" data-id="${d.id}">Cancel</button>
+            ` : `
+              <button data-act="open-file" data-id="${d.id}" ${d.state!=='completed'?'disabled':''}>Open</button>
+              <button data-act="show-in-folder" data-id="${d.id}">Show in Folder</button>
+            `}
+          </div>
+          <div class="meta">
+            <span class="state">${d.state}</span>
+            · ${fmtBytes(d.receivedBytes||0)} / ${fmtBytes(d.totalBytes||0)}
+          </div>
+          <div class="progress"><div class="bar" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }
+
+    function render(entries){
+      listEl.innerHTML = entries.map(rowHtml).join('');
+      emptyEl.style.display = entries.length ? 'none' : 'block';
+    }
+
+    async function refresh(){
+      const all = await api.list();
+      // Newest first by start time
+      all.sort((a,b)=> (b.startedAt||0)-(a.startedAt||0));
+      render(all);
+    }
+
+    listEl.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const act = btn.getAttribute('data-act');
+      if (!id || !act) return;
+      await api.action(id, act);
+      if (act==='cancel') refresh();
+    });
+
+    clearBtn.addEventListener('click', async ()=>{
+      await api.clearCompleted();
+      refresh();
+    });
+
+    api.onStarted(()=> refresh());
+    api.onUpdated(()=> {
+      // Partial update: just patch progress bar and bytes if present
+      // For simplicity now, refresh list
+      refresh();
+    });
+    api.onDone(()=> refresh());
+    api.onCleared(()=> refresh());
+
+    refresh();
+  </script>
+</body>
+</html>

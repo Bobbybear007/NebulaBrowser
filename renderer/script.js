@@ -52,7 +52,7 @@ urlBox.addEventListener('keydown', (e) => {
 
 let tabs = [];
 let activeTabId = null;
-const allowedInternalPages = ['settings', 'home'];
+const allowedInternalPages = ['settings', 'home', 'downloads'];
 let bookmarks = [];
 
 // Efficient render scheduling to avoid redundant DOM work
@@ -129,6 +129,8 @@ ipcRenderer.on('record-site-history', (event, url) => {
   debug('[DEBUG] Received site history update:', url);
   addToSiteHistory(url);
 });
+
+// Auto-open on download start is disabled by design now.
 
 function createTab(inputUrl) {
   inputUrl = inputUrl || 'browser://home';
@@ -790,9 +792,21 @@ function openSettings() {
   createTab('browser://settings');
 }
 
+// Open Downloads manager page
+function openDownloads() {
+  createTab('browser://downloads');
+}
+
 // Toggle menu dropdown
 const menuBtn = document.getElementById('menu-btn');
 const menuWrapper = document.querySelector('.menu-wrapper');
+// Downloads mini popup elements
+let downloadsBtnEl = null;
+let downloadsPopupEl = null;
+let downloadsListEl = null;
+let downloadsEmptyEl = null;
+let downloadsShowAllBtn = null;
+let ringSvgEl = null;
 
 // Open/close on button click; stop propagation so outside-click handler doesn't immediately close it
 menuBtn.addEventListener('click', (e) => {
@@ -820,6 +834,9 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && menuPopup && !menuPopup.classList.contains('hidden')) {
     menuPopup.classList.add('hidden');
+  }
+  if (e.key === 'Escape' && downloadsPopupEl && !downloadsPopupEl.classList.contains('hidden')) {
+    hideDownloadsPopup();
   }
 });
 
@@ -919,6 +936,40 @@ window.addEventListener('DOMContentLoaded', () => {
   const settingsBtn = document.getElementById('open-settings-btn');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
 
+  // downloads button
+  downloadsBtnEl = document.getElementById('downloads-btn');
+  downloadsPopupEl = document.getElementById('downloads-popup');
+  downloadsListEl = document.getElementById('downloads-list');
+  downloadsEmptyEl = document.getElementById('downloads-empty');
+  downloadsShowAllBtn = document.getElementById('downloads-show-all');
+  if (downloadsBtnEl) {
+    // Insert progress ring SVG
+    const ring = document.createElement('div');
+    ring.className = 'ring';
+  ring.innerHTML = '<svg viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="16.5"></circle><circle class="fg" cx="20" cy="20" r="16.5" stroke-dasharray="103.67" stroke-dashoffset="103.67"></circle></svg>';
+    downloadsBtnEl.appendChild(ring);
+    ringSvgEl = ring.querySelector('circle.fg');
+    downloadsBtnEl.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      toggleDownloadsPopup();
+    });
+  }
+  if (downloadsShowAllBtn) downloadsShowAllBtn.addEventListener('click', ()=> { hideDownloadsPopup(); openDownloads(); });
+  // Close popup if clicking elsewhere
+  document.addEventListener('click', (e)=>{
+    if (!downloadsPopupEl || downloadsPopupEl.classList.contains('hidden')) return;
+    const wrapper = downloadsPopupEl.parentElement;
+    if (wrapper && !wrapper.contains(e.target)) hideDownloadsPopup();
+  });
+
+  // Initialize list with any existing downloads
+  refreshDownloadsMini();
+  // Subscribe to updates
+  window.downloadsAPI?.onStarted(()=> { refreshDownloadsMini(); });
+  window.downloadsAPI?.onUpdated(()=> { refreshDownloadsMini(); });
+  window.downloadsAPI?.onDone(()=> { refreshDownloadsMini(); });
+  window.downloadsAPI?.onCleared(()=> { refreshDownloadsMini(); });
+
   // window control bindings
   const minBtn   = document.getElementById('min-btn');
   const maxBtn   = document.getElementById('max-btn');
@@ -995,6 +1046,9 @@ function attachCloseMenuOnInteract(el) {
     if (menuPopup && !menuPopup.classList.contains('hidden')) {
       menuPopup.classList.add('hidden');
     }
+    if (downloadsPopupEl && !downloadsPopupEl.classList.contains('hidden')) {
+      hideDownloadsPopup();
+    }
   };
   el.addEventListener('mousedown', closeIfOpen);
   el.addEventListener('pointerdown', closeIfOpen);
@@ -1059,3 +1113,84 @@ window.addEventListener('nebula-context-command', (e) => {
       break;
   }
 });
+
+// ------------------------------
+// Downloads mini UI helpers
+// ------------------------------
+function toggleDownloadsPopup() {
+  if (!downloadsPopupEl) return;
+  if (downloadsPopupEl.classList.contains('hidden')) showDownloadsPopup(); else hideDownloadsPopup();
+}
+function showDownloadsPopup() {
+  if (!downloadsPopupEl) return;
+  downloadsPopupEl.classList.remove('hidden');
+}
+function hideDownloadsPopup() {
+  if (!downloadsPopupEl) return;
+  downloadsPopupEl.classList.add('hidden');
+}
+
+function fmtBytesMini(n) {
+  if (!n || n <= 0) return '0 B';
+  const u = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(n)/Math.log(1024));
+  return (n/Math.pow(1024,i)).toFixed(i===0?0:1) + ' ' + u[i];
+}
+
+async function refreshDownloadsMini() {
+  if (!window.downloadsAPI) return;
+  const items = await window.downloadsAPI.list();
+  const has = items && items.length > 0;
+  if (downloadsEmptyEl) downloadsEmptyEl.style.display = has ? 'none' : 'block';
+  if (downloadsListEl) downloadsListEl.innerHTML = (items||[]).slice(0,5).map(d => {
+    const pct = d.totalBytes > 0 ? Math.min(100, Math.round((d.receivedBytes||0)*100/d.totalBytes)) : (d.state==='completed'?100:0);
+    return `
+      <div class="dl-item" data-id="${d.id}">
+        <div class="dl-file" title="${d.filename}">${d.filename}</div>
+        <div class="dl-actions">
+          ${d.state==='in-progress' ? `
+            <button data-act="${d.paused?'resume':'pause'}">${d.paused?'Resume':'Pause'}</button>
+            <button data-act="cancel">Cancel</button>
+          ` : `
+            <button data-act="open-file" ${d.state!=='completed'?'disabled':''}>Open</button>
+            <button data-act="show-in-folder">Show</button>
+          `}
+        </div>
+        <div class="dl-meta">${d.state} · ${fmtBytesMini(d.receivedBytes||0)} / ${fmtBytesMini(d.totalBytes||0)}</div>
+        <div class="dl-progress"><div class="dl-bar" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join('');
+
+  if (downloadsListEl) {
+    downloadsListEl.onclick = async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const itemEl = btn.closest('.dl-item');
+      const id = itemEl?.getAttribute('data-id');
+      const act = btn.getAttribute('data-act');
+      if (!id || !act) return;
+      await window.downloadsAPI.action(id, act);
+      if (act==='cancel') refreshDownloadsMini();
+    };
+  }
+
+  updateDownloadsRing(items||[]);
+}
+
+function updateDownloadsRing(items) {
+  if (!ringSvgEl) return;
+  // Compute aggregate progress for in-progress downloads
+  const inprog = items.filter(d => d.state === 'in-progress');
+  const total = inprog.reduce((a,d)=> a + (d.totalBytes||0), 0);
+  const done = inprog.reduce((a,d)=> a + (d.receivedBytes||0), 0);
+  let pct = 0;
+  if (total > 0) pct = Math.max(0, Math.min(1, done/total));
+  // If none in progress but some completed recently, show full ring briefly; else hide
+  const circumference = 103.67; // 2 * PI * r (r=16.5)
+  const offset = circumference * (1 - pct);
+  ringSvgEl.style.strokeDasharray = `${circumference}`;
+  ringSvgEl.style.strokeDashoffset = `${offset}`;
+  // Hide ring when no active downloads
+  const show = inprog.length > 0;
+  ringSvgEl.style.opacity = show ? '1' : '0';
+}

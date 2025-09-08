@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, screen, shell, dialog, Menu, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, session, screen, shell, dialog, Menu, clipboard, webContents } = require('electron');
 const { pathToFileURL } = require('url');
 const fs = require('fs');
 const path = require('path');
@@ -316,6 +316,16 @@ app.whenReady().then(() => {
 
   // Defer session configuration to microtask/next tick (already inexpensive) – keep explicit
   setImmediate(configureSessionsAsync);
+
+  // Register download handlers for common sessions
+  try {
+    const mainSes = session.fromPartition('persist:main');
+    const defSes = session.defaultSession;
+    if (mainSes) registerDownloadHandling(mainSes);
+    if (defSes && defSes !== mainSes) registerDownloadHandling(defSes);
+  } catch (e) {
+    console.warn('Failed to register download handlers:', e);
+  }
 
   if (process.platform === 'darwin') {
     app.dock.setIcon(path.join(__dirname, 'assets/images/Logos/Nebula-Icon.icns'));
@@ -669,6 +679,10 @@ function buildAndShowContextMenu(sender, params = {}) {
     if (linkURL) {
       template.push(
         { label: 'Open Link in New Tab', click: () => embedder.send('context-menu-command', { cmd: 'open-link-new-tab', url: linkURL }) },
+        { label: 'Download Link', click: () => {
+            try { (sender.hostWebContents || sender).downloadURL(linkURL); } catch (e) { console.error('downloadURL failed:', e); }
+          }
+        },
         { label: 'Open Link Externally', click: () => shell.openExternal(linkURL).catch(()=>{}) },
         { label: 'Copy Link Address', click: () => clipboard.writeText(linkURL) },
         { type: 'separator' }
@@ -810,4 +824,192 @@ ipcMain.handle('save-image-from-url', async (event, { url }) => {
     console.error('save-image-from-url failed:', err);
     return false;
   }
+});
+
+// =========================
+// Download manager plumbing
+// =========================
+
+// In-memory download registry
+const downloads = new Map(); // id -> { id, url, filename, savePath, totalBytes, receivedBytes, state, startedAt, mime, canResume, paused }
+
+function broadcastToAll(channel, payload) {
+  try {
+    for (const wc of webContents.getAllWebContents()) {
+      try { wc.send(channel, payload); } catch {}
+    }
+  } catch (e) {
+    // Fallback to windows only
+    for (const win of BrowserWindow.getAllWindows()) {
+      try { win.webContents.send(channel, payload); } catch {}
+    }
+  }
+}
+
+function registerDownloadHandling(ses) {
+  if (!ses || ses.__nebulaDownloadsHooked) return;
+  ses.__nebulaDownloadsHooked = true;
+  ses.on('will-download', async (event, item, wc) => {
+    try {
+      // Build an id (prefer stable GUID if available)
+      const id = typeof item.getGUID === 'function' ? item.getGUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      item.__nebulaId = id;
+      const filename = item.getFilename();
+      const mime = item.getMimeType?.() || 'application/octet-stream';
+      const totalBytes = item.getTotalBytes();
+      const url = item.getURL();
+
+      // Choose a default save path under user's Downloads, ensure unique to avoid overwrite
+      const defaultDir = app.getPath('downloads');
+      const uniquePath = await computeUniqueSavePath(defaultDir, filename);
+      try { item.setSavePath(uniquePath); } catch {}
+
+      const info = {
+        id, url, filename,
+        savePath: uniquePath,
+        totalBytes,
+        receivedBytes: 0,
+        state: 'in-progress',
+        startedAt: Date.now(),
+        mime,
+        canResume: false,
+        paused: false
+      };
+      downloads.set(id, { ...info, item });
+  const payload = { ...info };
+  broadcastToAll('downloads-started', payload);
+
+      item.on('updated', (e, state) => {
+        const d = downloads.get(id);
+        if (!d) return;
+        d.receivedBytes = item.getReceivedBytes();
+        d.canResume = !!item.canResume?.();
+        d.paused = !!item.isPaused?.();
+        d.state = state === 'interrupted' ? 'interrupted' : 'in-progress';
+        downloads.set(id, d);
+        broadcastToAll('downloads-updated', {
+          id,
+          receivedBytes: d.receivedBytes,
+          totalBytes: d.totalBytes,
+          state: d.state,
+          canResume: d.canResume,
+          paused: d.paused
+        });
+      });
+
+      item.once('done', (e, state) => {
+        const d = downloads.get(id) || {};
+        const finalState = state === 'completed' ? 'completed' : (state === 'cancelled' ? 'cancelled' : 'interrupted');
+        const final = {
+          id,
+          url,
+          filename,
+          savePath: item.getSavePath?.() || d.savePath,
+          totalBytes: d.totalBytes || item.getTotalBytes?.() || 0,
+          receivedBytes: item.getReceivedBytes?.() || d.receivedBytes || 0,
+          state: finalState,
+          startedAt: d.startedAt || Date.now(),
+          endedAt: Date.now(),
+          mime
+        };
+        // Store minimal object; drop live item ref
+        downloads.set(id, final);
+        broadcastToAll('downloads-done', final);
+      });
+    } catch (err) {
+      console.error('will-download handler error:', err);
+    }
+  });
+}
+
+async function computeUniqueSavePath(dir, baseName) {
+  try {
+    const target = path.join(dir, baseName);
+    try {
+      await fs.promises.access(target);
+      // Already exists, create a (n) suffix
+      const { name, ext } = splitNameExt(baseName);
+      for (let i = 1; i < 10000; i++) {
+        const candidate = path.join(dir, `${name} (${i})${ext}`);
+        try { await fs.promises.access(candidate); } catch { return candidate; }
+      }
+      // Fallback if too many
+      return path.join(dir, `${Date.now()}-${baseName}`);
+    } catch {
+      return target; // does not exist
+    }
+  } catch (e) {
+    // Fallback to temp directory
+    return path.join(app.getPath('downloads'), `${Date.now()}-${baseName}`);
+  }
+}
+
+function splitNameExt(filename) {
+  const ext = path.extname(filename);
+  const name = filename.slice(0, filename.length - ext.length);
+  return { name, ext };
+}
+
+// IPC: list downloads
+ipcMain.handle('downloads-get-all', () => {
+  return Array.from(downloads.values()).map(d => {
+    const { item, ...rest } = d;
+    if (item) {
+      return {
+        ...rest,
+        receivedBytes: item.getReceivedBytes?.() ?? rest.receivedBytes ?? 0,
+        totalBytes: item.getTotalBytes?.() ?? rest.totalBytes ?? 0,
+        state: rest.state || 'in-progress',
+        paused: item.isPaused?.() || false,
+        canResume: item.canResume?.() || false
+      };
+    }
+    return rest;
+  });
+});
+
+// IPC: control a download (pause/resume/cancel/open/show)
+ipcMain.handle('downloads-action', async (event, { id, action }) => {
+  const d = downloads.get(id);
+  if (!d) return false;
+  const item = d.item;
+  try {
+    switch (action) {
+      case 'pause':
+        if (item && !item.isPaused?.()) item.pause?.();
+        return true;
+      case 'resume':
+        if (item && item.canResume?.()) item.resume?.();
+        return true;
+      case 'cancel':
+        if (item && d.state === 'in-progress') item.cancel?.();
+        return true;
+      case 'open-file':
+        if (d.savePath) {
+          await shell.openPath(d.savePath);
+          return true;
+        }
+        return false;
+      case 'show-in-folder':
+        if (d.savePath) {
+          shell.showItemInFolder(d.savePath);
+          return true;
+        }
+        return false;
+      default:
+        return false;
+    }
+  } catch (e) {
+    console.error('downloads-action error:', e);
+    return false;
+  }
+});
+
+// IPC: clear completed entries from the registry (keeps in-progress)
+ipcMain.handle('downloads-clear-completed', () => {
+  for (const [id, d] of downloads.entries()) {
+    if (d.state === 'completed' || d.state === 'cancelled') downloads.delete(id);
+  }
+  broadcastToAll('downloads-cleared');
+  return true;
 });

@@ -120,3 +120,14 @@ contextBridge.exposeInMainWorld('aboutAPI', {
 ipcRenderer.on('context-menu-command', (event, payload) => {
   window.dispatchEvent(new CustomEvent('nebula-context-command', { detail: payload }));
 });
+
+// Downloads API exposed to renderer
+contextBridge.exposeInMainWorld('downloadsAPI', {
+  list: () => ipcRenderer.invoke('downloads-get-all'),
+  action: (id, action) => ipcRenderer.invoke('downloads-action', { id, action }),
+  clearCompleted: () => ipcRenderer.invoke('downloads-clear-completed'),
+  onStarted: (handler) => ipcRenderer.on('downloads-started', (_e, payload) => handler(payload)),
+  onUpdated: (handler) => ipcRenderer.on('downloads-updated', (_e, payload) => handler(payload)),
+  onDone: (handler) => ipcRenderer.on('downloads-done', (_e, payload) => handler(payload)),
+  onCleared: (handler) => ipcRenderer.on('downloads-cleared', handler)
+});
