@@ -120,7 +120,7 @@ function createWindow(startUrl) {
     // draggable region via CSS (-webkit-app-region: drag).
     Object.assign(windowOptions, {
       frame: true,
-      titleBarStyle: 'hidden',
+      titleBarStyle: 'hiddenInset',
       trafficLightPosition: { x: 15, y: 20 },
       // Transparent background so renderer chrome blends with content.
       backgroundColor: '#00000000',

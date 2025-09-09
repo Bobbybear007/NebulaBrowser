@@ -56,7 +56,8 @@ html, body {
   scrollbar-width: thin;            /* slimmer track */
   -webkit-backdrop-filter: blur(var(--blur));
   backdrop-filter: blur(var(--blur));
-  -webkit-app-region: no-drag; /* ensure HTML5 DnD works inside tab strip */
+  /* Only the background areas are draggable. Individual tabs opt-out via no-drag. */
+  -webkit-app-region: drag;
 }
 
 /* NAVBAR LAYOUT */
@@ -80,17 +81,8 @@ html, body {
 /* Make the top nav a draggable region on macOS when we use a hidden titlebar.
    Interactive controls inside must opt-out with -webkit-app-region: no-drag. */
 @supports (-webkit-app-region: drag) {
-  /* Make both the tab strip and the nav area draggable so users have a
-     larger region to click-and-drag the window. Keep interactive elements
-     marked as no-drag so buttons and tabs remain clickable. */
-  /* Keep only the nav area as a window-drag region so tabs can use HTML5 DnD */
-  #nav {
-    -webkit-app-region: drag;
-    user-select: none;
-    /* keep the appearance consistent even if transparent window behind it */
-  background: rgba(20,22,30,0.72);
-  backdrop-filter: blur(var(--blur));
-  }
+  /* Make the top nav a draggable region, but only in its background/gaps. */
+  #nav { -webkit-app-region: drag; user-select: none; }
 
   /* Interactive controls must explicitly opt-out of dragging. This keeps
      the larger draggable area while preserving normal click behavior. */
