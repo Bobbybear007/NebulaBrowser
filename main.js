@@ -805,6 +805,39 @@ app.on('web-contents-created', (event, contents) => {
   contents.on('context-menu', (e, params) => {
     buildAndShowContextMenu(contents, params);
   });
+
+  // On macOS, when a page (or a <webview>) enters HTML fullscreen (e.g., YouTube video),
+  // also toggle the BrowserWindow into simple fullscreen so the content uses the whole
+  // screen and macOS traffic lights/titlebar are hidden. Revert when HTML fullscreen exits.
+  if (process.platform === 'darwin') {
+    const getOwningWindow = () => {
+      try {
+        const host = contents.hostWebContents || contents;
+        return BrowserWindow.fromWebContents(host) || null;
+      } catch { return null; }
+    };
+
+    contents.on('enter-html-full-screen', () => {
+      const win = getOwningWindow();
+      if (!win) return;
+      win.__htmlFsDepth = (win.__htmlFsDepth || 0) + 1;
+      // If the window is already in native fullscreen (green button), don't switch modes
+      const alreadyNativeFs = typeof win.isFullScreen === 'function' && win.isFullScreen();
+      if (!alreadyNativeFs && !win.isSimpleFullScreen?.()) {
+        try { win.setSimpleFullScreen?.(true); win.__htmlFsUsingSimple = true; } catch {}
+      }
+    });
+
+    contents.on('leave-html-full-screen', () => {
+      const win = getOwningWindow();
+      if (!win) return;
+      win.__htmlFsDepth = Math.max(0, (win.__htmlFsDepth || 1) - 1);
+      if (win.__htmlFsDepth === 0 && win.__htmlFsUsingSimple) {
+        try { if (win.isSimpleFullScreen?.()) win.setSimpleFullScreen?.(false); } catch {}
+        win.__htmlFsUsingSimple = false;
+      }
+    });
+  }
 });
 
 // --- Image save handlers ---
