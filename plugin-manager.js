@@ -42,7 +42,19 @@ class PluginManager {
         const dir = path.join(root, ent.name);
         const manifestPath = path.join(dir, 'plugin.json');
         let manifest;
-        try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch { continue; }
+        try {
+          manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          // Normalize optional fields
+          const cats = manifest.categories;
+          if (typeof cats === 'string') manifest.categories = [cats];
+          else if (Array.isArray(cats)) manifest.categories = cats.filter(x => typeof x === 'string');
+          else if (cats == null) manifest.categories = [];
+
+          const au = manifest.authors;
+          if (typeof au === 'string') manifest.authors = [au];
+          else if (Array.isArray(au)) manifest.authors = au.filter(x => (typeof x === 'string') || (x && typeof x === 'object' && typeof x.name === 'string'));
+          else if (au == null) manifest.authors = [];
+        } catch { continue; }
         const enabled = manifest.enabled !== false; // default true
         const id = manifest.id || ent.name;
     const record = { id, dir, manifest, enabled, mod: null, mainPath: null };
@@ -171,6 +183,10 @@ class PluginManager {
       name: p.manifest.name || p.id,
       version: p.manifest.version || '0.0.0',
       description: p.manifest.description || '',
+  categories: Array.isArray(p.manifest.categories) ? p.manifest.categories : [],
+      authors: Array.isArray(p.manifest.authors)
+        ? p.manifest.authors.map(x => (typeof x === 'string' ? x : (x && x.name) || '')).filter(Boolean)
+        : [],
       enabled: !!p.enabled,
       hasMain: !!p.manifest.main,
       hasRendererPreload: !!p.manifest.rendererPreload,
@@ -190,11 +206,21 @@ class PluginManager {
         const manifestPath = path.join(dir, 'plugin.json');
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          const cats = manifest.categories;
+          const categories = typeof cats === 'string' ? [cats] : Array.isArray(cats) ? cats.filter(x => typeof x === 'string') : [];
+          const au = manifest.authors;
+          const authors = typeof au === 'string'
+            ? [au]
+            : Array.isArray(au)
+              ? au.map(x => (typeof x === 'string' ? x : (x && x.name) || null)).filter(Boolean)
+              : [];
           out.push({
             id: manifest.id || ent.name,
             name: manifest.name || ent.name,
             version: manifest.version || '0.0.0',
             description: manifest.description || '',
+            categories,
+            authors,
             enabled: manifest.enabled !== false,
             hasMain: !!manifest.main,
             hasRendererPreload: !!manifest.rendererPreload,

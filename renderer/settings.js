@@ -355,6 +355,10 @@ async function loadPluginsUI() {
     listEl.appendChild(empty);
   } else {
     for (const p of items) {
+    const categories = Array.isArray(p.categories) ? p.categories.filter(x => x && typeof x === 'string') : [];
+    const authors = Array.isArray(p.authors) ? p.authors.filter(x => x && typeof x === 'string') : [];
+    const tagsHtml = categories.length ? `<div class="plugin-tags">${categories.map(c => `<span class=\"plugin-tag\">${escapeHtml(c)}</span>`).join('')}</div>` : '';
+    const authorsHtml = authors.length ? `<div class=\"plugin-authors\"><span class=\"muted\">Authors:</span> ${authors.map(a => `<span class=\"plugin-author\">${escapeHtml(a)}</span>`).join(', ')}</div>` : '';
       const row = document.createElement('div');
       row.className = 'plugin-item';
       row.setAttribute('role', 'listitem');
@@ -362,6 +366,8 @@ async function loadPluginsUI() {
         <div class="plugin-meta">
           <div class="plugin-title">${escapeHtml(p.name)} <span style="opacity:.7;font-weight:400">v${escapeHtml(p.version)}</span></div>
           <div class="plugin-desc">${escapeHtml(p.description || '')}</div>
+      ${tagsHtml}
+      ${authorsHtml}
           <div class="plugin-desc" style="opacity:.6; font-size:.85em;">${escapeHtml(p.dir)}</div>
         </div>
         <div class="plugin-actions">

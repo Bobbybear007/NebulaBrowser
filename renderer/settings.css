@@ -8,6 +8,10 @@
 .plugin-desc { opacity:.8; font-size:.9em; }
 .plugin-actions { display:flex; gap:8px; align-items:center; }
 .plugin-actions .spacer { width:8px; }
+.plugin-tags { display:flex; flex-wrap: wrap; gap:6px; margin-top: 4px; }
+.plugin-tag { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:.75em; opacity:.9; border:1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.06); }
+.plugin-authors { margin-top: 4px; font-size:.85em; opacity:.85; }
+.plugin-authors .muted { opacity:.7; margin-right: 6px; }
 :root {
   --bg: #121418;
   --dark-blue: #0B1C2B;

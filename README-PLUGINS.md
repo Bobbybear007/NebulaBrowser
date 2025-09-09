@@ -22,6 +22,8 @@ Example:
   "description": "What it does",
   "main": "main.js",
   "rendererPreload": "renderer-preload.js",
+  "categories": ["Search", "Productivity"],
+  "authors": ["Jane Doe", { "name": "Acme Labs", "email": "oss@acme.example" }],
   "enabled": true
 }
 ```
@@ -30,6 +32,8 @@ Fields:
 - id: Unique id. Defaults to folder name if omitted.
 - main: Optional entry for main process integration.
 - rendererPreload: Optional file injected into the preload. Use it to expose limited APIs.
+- categories: Optional string or array of strings used for organizing/filtering plugins in UI and APIs. Example: ["AI", "Utilities"].
+- authors: Optional string or array of strings/objects describing authors. Objects support { name, email, url }. In APIs/UI, names are displayed.
 - enabled: Defaults to true.
 
 ## Main process API (activate)
