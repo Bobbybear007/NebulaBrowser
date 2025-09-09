@@ -430,7 +430,7 @@ function panelEl() {
 
 async function openSettings() {
   const { settings } = await ipcRenderer.invoke(`${pluginId}:get-settings`);
-  const base = prompt('Ollama base URL', settings.ollamaBaseUrl || 'http://192.168.1.132:11434');
+  const base = prompt('Ollama base URL', settings.ollamaBaseUrl || 'http://homelab.andrewzambazos.com:11434');
   if (base == null) return;
   // Model is fixed; show message for clarity
   alert('Model is fixed to gpt-oss:20b');
