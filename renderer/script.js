@@ -52,7 +52,52 @@ urlBox.addEventListener('keydown', (e) => {
 
 let tabs = [];
 let activeTabId = null;
-const allowedInternalPages = ['settings', 'home', 'downloads'];
+const allowedInternalPages = ['settings', 'home', 'downloads', 'nebot'];
+let pluginPages = []; // { id, file, fileUrl, pluginId }
+let pluginPagesReady = false;
+const pendingInternalNavigations = [];
+
+// Allow isolated worlds / plugin preloads (contextIsolation) to request opening an internal page
+window.addEventListener('message', (e) => {
+  try {
+    const data = e.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'open-internal-page' && typeof data.url === 'string') {
+      console.log('[DEBUG] Message request to open internal page:', data.url);
+      createTab(data.url);
+    }
+  } catch (err) {
+    console.warn('[DEBUG] open-internal-page handler error', err);
+  }
+});
+
+// Fetch plugin-provided pages (browser://<id>) once on startup
+(async () => {
+  try {
+    console.log('[DEBUG] About to request plugin pages from main process...');
+    pluginPages = await ipcRenderer.invoke('plugins-get-pages');
+    console.log('[DEBUG] Loaded pluginPages:', pluginPages);
+    console.log('[DEBUG] allowedInternalPages before:', allowedInternalPages);
+    for (const p of pluginPages) {
+      if (p && p.id && !allowedInternalPages.includes(p.id)) {
+        console.log('[DEBUG] Adding plugin page to allowed list:', p.id);
+        allowedInternalPages.push(p.id);
+      }
+    }
+    console.log('[DEBUG] allowedInternalPages after:', allowedInternalPages);
+  } catch (e) { 
+    console.warn('Failed to load plugin pages', e); 
+  }
+  finally {
+    pluginPagesReady = true;
+    console.log('[DEBUG] Plugin pages ready, flushing', pendingInternalNavigations.length, 'pending navigations');
+    // Flush any queued internal navigations that occurred before readiness
+    while (pendingInternalNavigations.length) {
+      const fn = pendingInternalNavigations.shift();
+      try { fn(); } catch {}
+    }
+  }
+})();
 let bookmarks = [];
 
 // Efficient render scheduling to avoid redundant DOM work
@@ -134,8 +179,14 @@ ipcRenderer.on('record-site-history', (event, url) => {
 
 function createTab(inputUrl) {
   inputUrl = inputUrl || 'browser://home';
-  debug('[DEBUG] createTab() inputUrl =', inputUrl);
+  console.log('[DEBUG] createTab() inputUrl =', inputUrl);
   const id = crypto.randomUUID();
+  if (inputUrl.startsWith('browser://') && !pluginPagesReady) {
+    // Defer creation until plugin pages known to avoid 404 race
+    console.log('[DEBUG] Deferring createTab until pluginPagesReady');
+    pendingInternalNavigations.push(() => createTab(inputUrl));
+    return id;
+  }
   
   // Handle home page specially
   if (inputUrl === 'browser://home') {
@@ -162,6 +213,7 @@ function createTab(inputUrl) {
   
   // For all other URLs, use webview
   let resolvedUrl = resolveInternalUrl(inputUrl);
+  console.log('[DEBUG] createTab resolvedUrl:', resolvedUrl, 'from inputUrl:', inputUrl);
   // If it's a raw data: URL (image) keep as is; blob: will only resolve within its origin context (may fail)
   // For very long data URLs we could embed them in a minimal viewer page for cleaner rendering.
   if (resolvedUrl.startsWith('data:') && resolvedUrl.length > 4096) {
@@ -278,13 +330,45 @@ function createTab(inputUrl) {
   scheduleRenderTabs();
 }
 
+// Expose for plugin usage (e.g., Nebot panel "Open Page")
+try { window.createTab = createTab; } catch {}
+
 
 
 function resolveInternalUrl(url) {
+  console.log('[DEBUG] resolveInternalUrl called with:', url);
   if (url.startsWith('browser://')) {
     const page = url.replace('browser://', '');
-    if (allowedInternalPages.includes(page)) return `${page}.html`;
-    else return '404.html';
+    console.log('[DEBUG] Extracted page:', page);
+    // Fast path: if user typed browser://nebot and plugin page exists, return immediately
+    if (page === 'nebot') {
+      const nebotPage = pluginPages.find(p => p.id === 'nebot');
+      console.log('[DEBUG] Fast path for nebot, pluginPages:', pluginPages, 'nebotPage:', nebotPage);
+      if (nebotPage && (nebotPage.fileUrl || nebotPage.file)) {
+        const resolvedFast = nebotPage.fileUrl || (nebotPage.file.startsWith('file://') ? nebotPage.file : 'file://' + nebotPage.file.replace(/\\/g,'/'));
+        console.log('[DEBUG] Fast path nebot resolve ->', resolvedFast);
+        return resolvedFast;
+      }
+      console.log('[DEBUG] No plugin page found for nebot, falling back to nebot.html');
+    }
+    console.log('[DEBUG] Checking if page in allowedInternalPages:', page, 'list:', allowedInternalPages);
+    if (allowedInternalPages.includes(page)) {
+      // Check if this page is provided by a plugin (absolute file path)
+      const plug = pluginPages.find(p => p.id === page);
+      console.log('[DEBUG] Resolving browser://' + page, 'plug:', plug);
+      if (plug && (plug.fileUrl || plug.file)) {
+        // Prefer pre-built fileUrl for correctness across platforms
+  const resolved = plug.fileUrl ? plug.fileUrl : (plug.file.startsWith('file://') ? plug.file : 'file://' + plug.file.replace(/\\/g,'/'));
+  console.log('[DEBUG] Resolved plugin page', page, '->', resolved);
+  return resolved;
+      }
+  // Fallback: built-in renderer copy (e.g., renderer/nebot.html)
+  console.log('[DEBUG] Using fallback for page:', page);
+  if (page === 'nebot') return 'nebot.html';
+      return `${page}.html`;
+    }
+    console.log('[DEBUG] Page not in allowedInternalPages, returning 404');
+    return '404.html';
   }
   // Allow direct loading of common schemes without forcing https://
   if (/^(https?:|file:|data:|blob:)/i.test(url)) return url;
@@ -309,21 +393,9 @@ function updateTabMetadata(id, key, value) {
   }
 }
 
-function navigate() {
-  const rawInput = urlBox.value.trim();
-  // Strip surrounding single or double quotes (common when copying paths)
-  let input = rawInput;
-  if ((input.startsWith('"') && input.endsWith('"')) || (input.startsWith("'") && input.endsWith("'"))) {
-    input = input.slice(1, -1);
-  }
-  // If we modified input (removed quotes), reflect it back in the UI for clarity
-  if (input !== rawInput) {
-    urlBox.value = input;
-  }
+function performNavigation(input, originalInputForHistory) {
   const tab = tabs.find(t => t.id === activeTabId);
   if (!tab) return;
-
-  // decide if this is a search query or a URL/internal page
   const hasProtocol = /^https?:\/\//i.test(input);
   const isFileProtocol = /^file:\/\//i.test(input);
   const looksLikeLocalPath = /^(?:[A-Za-z]:\\|\\\\|\/?)[^?]*\.(?:x?html?)$/i.test(input);
@@ -331,49 +403,56 @@ function navigate() {
   const isLikelyUrl = hasProtocol || input.includes('.');
   let resolved;
   if (isFileProtocol) {
-    resolved = input; // Electron will load file:// directly in <webview>
+    resolved = input;
   } else if (looksLikeLocalPath) {
-    // Convert Windows or *nix style path to file:// URL
-    let p = input;
-    // Expand backslashes
-    p = p.replace(/\\/g, '/');
-    // If it starts with a drive letter like C:/ ensure single leading slash
-    if (/^[A-Za-z]:\//.test(p)) {
-      resolved = 'file:///' + encodeURI(p);
-    } else if (p.startsWith('/')) {
-      resolved = 'file://' + encodeURI(p); // already absolute
-    } else {
-      // relative path relative to app root (renderer directory)
-      resolved = 'file://' + encodeURI(p); // fallback; treat as relative from working dir
-    }
+    let p = input.replace(/\\/g,'/');
+    if (/^[A-Za-z]:\//.test(p)) resolved = 'file:///' + encodeURI(p); else if (p.startsWith('/')) resolved = 'file://' + encodeURI(p); else resolved = 'file://' + encodeURI(p);
   } else if (!isInternal && !isLikelyUrl) {
     resolved = `https://www.google.com/search?q=${encodeURIComponent(input)}`;
   } else {
     resolved = resolveInternalUrl(input);
   }
 
-  // If current tab is a home tab and we're navigating to a website, 
-  // we need to convert it to a webview tab or create a new one
-  if (tab.isHome && !input.startsWith('browser://')) {
-    // Convert home tab to webview tab
-    convertHomeTabToWebview(tab.id, input, resolved);
+  console.log('[DEBUG] performNavigation input:', input, 'resolved:', resolved, 'tab.isHome:', tab.isHome, 'isInternal:', isInternal);
+
+  if (tab.isHome && !isInternal) {
+    convertHomeTabToWebview(tab.id, originalInputForHistory, resolved);
     return;
   }
 
-  // For regular webview tabs, just navigate
+  // If this is a home tab and we're navigating to an internal page, convert to webview
+  if (tab.isHome && isInternal) {
+    convertHomeTabToWebview(tab.id, originalInputForHistory, resolved);
+    return;
+  }
+
   const webview = document.getElementById(`tab-${activeTabId}`);
-  if (!webview) return;
-
-  // Push to history using the original input
+  if (!webview) {
+    console.log('[DEBUG] No webview found for tab', activeTabId, 'creating new tab instead');
+    createTab(input);
+    return;
+  }
   tab.history = tab.history.slice(0, tab.historyIndex + 1);
-  tab.history.push(input);
+  tab.history.push(originalInputForHistory);
   tab.historyIndex++;
-
-  tab.url = input; 
+  tab.url = originalInputForHistory;
   webview.src = resolved;
-
   scheduleRenderTabs();
   scheduleUpdateNavButtons();
+}
+
+function navigate() {
+  const rawInput = urlBox.value.trim();
+  let input = rawInput;
+  if ((input.startsWith('"') && input.endsWith('"')) || (input.startsWith("'") && input.endsWith("'"))) input = input.slice(1, -1);
+  if (input !== rawInput) urlBox.value = input;
+  const isInternal = input.startsWith('browser://');
+  if (isInternal && !pluginPagesReady) {
+    const captured = input; // preserve original
+    pendingInternalNavigations.push(() => performNavigation(captured, captured));
+    return;
+  }
+  performNavigation(input, input);
 }
 
 // Keyboard shortcut: Ctrl+O (Cmd+O on mac) to open a local file
@@ -1126,14 +1205,7 @@ function attachCloseMenuOnInteract(el) {
   el.addEventListener('focus', closeIfOpen, true);
 }
 
-// Attempt to load Node modules if available for context-menu actions
-let fs, remote;
-try {
-  fs = require('fs');
-  remote = require('electron').remote;
-} catch (err) {
-  console.warn('fs or remote modules unavailable in renderer:', err);
-}
+// Use electronAPI from preload - already defined at top of file
 
 // Native context menu: delegate to main via preload API
 document.addEventListener('contextmenu', (e) => {

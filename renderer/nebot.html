@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Nebot</title>
+  <link rel="stylesheet" href="../plugins/nebot/page.css" onerror="this.remove()"/>
+  <style>
+    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:#12141c; color:#e6e8ef; }
+    .fallback { max-width:620px; margin:60px auto; padding:32px 36px; background:#1d222e; border:1px solid rgba(255,255,255,0.08); border-radius:18px; }
+    .fallback h1 { margin:0 0 12px; font-size:28px; background:linear-gradient(90deg,#a48bff,#6cb6ff); -webkit-background-clip:text; color:transparent; }
+    .fallback p { line-height:1.55; }
+    .tip { background:#232b38; padding:10px 14px; border-radius:10px; font-size:13px; margin-top:18px; border:1px solid rgba(255,255,255,0.08); }
+    .err { color:#ff6d7d; font-weight:600; }
+    #mount { min-height:400px; }
+  </style>
+</head>
+<body>
+  <div id="mount"></div>
+  <script>
+    (async function(){
+      // Wait a tick so plugin preload (renderer-preload) runs and exposes window.ollamaChat
+      const mount = document.getElementById('mount');
+      function showFallback(reason){
+        mount.innerHTML = `<div class="fallback">`+
+          `<h1>Nebot</h1>`+
+          `<p>The Nebot plugin page could not load automatically.</p>`+
+          (reason?`<p class='err'>${reason}</p>`:'')+
+          `<div class="tip"><strong>How to fix</strong><br/>1. Ensure the Nebot plugin folder exists at plugins/nebot.<br/>2. Confirm plugin is enabled (manifest enabled: true).<br/>3. Restart the app so the plugin manager registers pages.</div>`+
+        `</div>`;
+      }
+      try {
+        // Try to fetch plugin page HTML directly
+        const res = await fetch('../plugins/nebot/page.html');
+        if(!res.ok){ showFallback('Missing page.html (status '+res.status+').'); return; }
+        const html = await res.text();
+        // Simple sandboxed injection
+        mount.innerHTML = html;
+        // The injected page expects its CSS & JS relative to itself; adjust asset paths
+        const fixLinks = mount.querySelectorAll('link[rel="stylesheet"], script[src]');
+        fixLinks.forEach(el=>{
+          const attr = el.tagName==='SCRIPT'?'src':'href';
+          if(el.getAttribute(attr) && !/plugins\/nebot\//.test(el.getAttribute(attr))){
+            el.setAttribute(attr,'../plugins/nebot/'+el.getAttribute(attr));
+          }
+        });
+        // Inject JS if not already present
+        if(!mount.querySelector('script[data-nebot-page]')){
+          const s=document.createElement('script'); s.dataset.nebotPage='1'; 
+          // Pass the current URL hash to the page script for debug mode
+          s.src='../plugins/nebot/page.js' + window.location.hash; 
+          mount.appendChild(s);
+        }
+      } catch(e){
+        showFallback(e.message||'Unknown error');
+      }
+    })();
+  </script>
+</body>
+</html>

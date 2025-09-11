@@ -787,6 +787,11 @@ ipcMain.handle('plugins-get-renderer-preloads', () => {
   try { return pluginManager.getRendererPreloads(); } catch { return []; }
 });
 
+// Plugins: expose registered internal pages (browser://<id>)
+ipcMain.handle('plugins-get-pages', () => {
+  try { return pluginManager.getRendererPages(); } catch { return []; }
+});
+
 // Plugins: management IPC for settings UI
 ipcMain.handle('plugins-list', () => pluginManager.discoverPlugins());
 ipcMain.handle('plugins-set-enabled', async (_e, { id, enabled }) => {
@@ -805,6 +810,9 @@ app.on('web-contents-created', (event, contents) => {
   contents.on('context-menu', (e, params) => {
     buildAndShowContextMenu(contents, params);
   });
+
+  // Emit to plugins
+  try { pluginManager.emit('web-contents-created', contents); } catch {}
 
   // On macOS, when a page (or a <webview>) enters HTML fullscreen (e.g., YouTube video),
   // also toggle the BrowserWindow into simple fullscreen so the content uses the whole

@@ -1,11 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { app, session, Menu, ipcMain, BrowserWindow, dialog, shell } = require('electron');
 
 class PluginManager {
   constructor() {
     this.plugins = []; // { id, dir, manifest, mod, enabled }
     this.rendererPreloads = []; // absolute file paths
+  this.rendererPages = []; // { id, file, pluginId }
     this._listeners = {
       'app-ready': [],
       'window-created': [],
@@ -33,6 +35,7 @@ class PluginManager {
   loadAll() {
     this.plugins = [];
     this.rendererPreloads = [];
+  this.rendererPages = [];
     const dirs = this.getPluginDirs();
     for (const root of dirs) {
       let entries = [];
@@ -127,11 +130,27 @@ class PluginManager {
       contributeContextMenu: (contribFn) => {
         try { manager._contextMenuContribs.push(contribFn); } catch (e) { console.error(logPrefix, 'contributeContextMenu failed', e); }
       },
+      // Register a dedicated internal page (shown via browser://<id>)
+    registerRendererPage: ({ id, html }) => {
+        try {
+          if (!id || !html) return;
+      let fileUrl = null;
+      try { fileUrl = pathToFileURL(html).href; } catch {}
+      manager.rendererPages.push({ id, file: html, fileUrl, pluginId: plugin.id });
+          console.log('[Plugins] Registered page:', id, '->', html, 'fileUrl:', fileUrl);
+          manager.log('registered page:', id, '->', html);
+        } catch (e) { manager.error('registerRendererPage failed', e); }
+      }
     };
   }
 
   getRendererPreloads() {
     return Array.from(new Set(this.rendererPreloads));
+  }
+
+  getRendererPages() {
+    // Return a shallow copy so callers can't mutate internal array
+    return this.rendererPages.map(p => ({ ...p }));
   }
 
   on(evt, cb) {
